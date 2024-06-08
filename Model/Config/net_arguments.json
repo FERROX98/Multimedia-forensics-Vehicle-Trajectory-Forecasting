@@ -1,0 +1,13 @@
+{
+    "debug": false,
+    "train_flag": false,
+    "in_target_length": 2,
+    "in_target_embedding_size": 128,
+    "in_grid_nbrs_length": 90,
+    "in_nbrs_embedding_size": 128,
+    "target_encoder_size": 64,
+    "nbrs_encoder_size": 64,
+    "decoder_size": 128,
+    "n_predicted_frame": 25,
+    "output_size": 2
+}
