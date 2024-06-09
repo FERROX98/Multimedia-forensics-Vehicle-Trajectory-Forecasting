@@ -13,3 +13,49 @@ Vehicle trajectory forecasting is a critical component in autonomous driving sys
 3. **Training**: The training loop includes loss computation, backpropagation, and optimization steps. Monitoring the training progress with ETA calculations helps manage long training processes.
 4. **Evaluation**: Evaluating the model on a test dataset helps in understanding its performance and identifying areas for improvement.
 5. **Goal**: The ultimate goal is to accurately predict future trajectories of vehicles based on their past movements and interactions with neighboring vehicles, enhancing the safety and reliability of autonomous driving systems.
+
+
+## Repository Structure
+
+### Root Directory
+- **Data/**: This directory contains datasets related to the project.
+
+- **Model/**: This directory contains various scripts related to the model and its functionalities.
+ files.
+  - **Config/**: This subdirectory contains configuration files or scripts.
+    - `dataset.py`: Handles loading and preprocessing of datasets.
+    - `evaluate.py`: Contains code for evaluating the model's performance.
+    - `model.py`: Defines the architecture of the model.
+    - `train.py`: Handles the training process of the model.
+    - `utils.py`: Contains utility functions used throughout the project.
+
+- **Report/images/**: This subdirectory under Report contains images used in reports or documentation.
+  - `architecture.drawio`: A diagram representing the architecture of the model or system.
+
+- **Script/**: This directory contains additional scripts or tools related to the project.
+
+- **SperimentalValue**: Contanis the data relative to training.
+
+
+# Running Python Script for Training and Evaluation
+
+In this guide, we'll walk through the steps to run a Python script that trains and evaluates a machine learning model. Below are the necessary steps:
+
+## Step 1: Install Dependencies
+
+You'll need to install the required libraries for your machine learning project. You can install them using pip:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Train
+```bash
+python train.py
+```
+
+## Evaluate
+```bash
+python evaluate.py
+```
+
