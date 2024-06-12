@@ -21,13 +21,14 @@ Vehicle trajectory forecasting is a critical component in autonomous driving sys
 - **Data/**: This directory contains datasets related to the project.
 
 - **Model/**: This directory contains various scripts related to the model and its functionalities.
- files.
-  - **Config/**: This subdirectory contains configuration files or scripts.
     - `dataset.py`: Handles loading and preprocessing of datasets.
     - `evaluate.py`: Contains code for evaluating the model's performance.
     - `model.py`: Defines the architecture of the model.
     - `train.py`: Handles the training process of the model.
     - `utils.py`: Contains utility functions used throughout the project.
+
+ files.
+  - **Config/**: This subdirectory contains params and argument of the model.
 
 - **Report/images/**: This subdirectory under Report contains images used in reports or documentation.
   - `architecture.drawio`: A diagram representing the architecture of the model or system.

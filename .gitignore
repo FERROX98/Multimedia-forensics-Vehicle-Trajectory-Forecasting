@@ -26,3 +26,10 @@ Model/__pycache__/model.cpython-310.pyc
 Model/__pycache__/dataset.cpython-310.pyc
 Model/Config/custom.tar
 SperimentalValue/*
+Data/NGSIM.dvc
+Data/cutted.csv
+Data/NGSIM_20240603.csv
+.vscode/settings.json
+Data/TestSet_new.mat
+Data/TrainSet_new.mat
+Data/ValSet_new.mat

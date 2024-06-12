@@ -9,5 +9,5 @@
     "nbrs_encoder_size": 64,
     "decoder_size": 128,
     "n_predicted_frame": 25,
-    "output_size": 2
+    "output_size": 5
 }
