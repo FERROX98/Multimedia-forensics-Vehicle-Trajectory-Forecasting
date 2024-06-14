@@ -204,7 +204,7 @@ def save_mat(filename, tracks, samples):
     print(filename)
 
     df = pd.DataFrame(samples)
-    df.to_csv(filename + "_traj.csv", header=headers_reduced, index=False)
+    df.to_csv(filename + "_samples.csv", header=headers_reduced, index=False)
 
     df = pd.DataFrame(tracks)
     df.to_csv(filename + "_tracks.csv", header=headers_reduced, index=False)

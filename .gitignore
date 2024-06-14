@@ -33,3 +33,15 @@ Data/NGSIM_20240603.csv
 Data/TestSet_new.mat
 Data/TrainSet_new.mat
 Data/ValSet_new.mat
+Data/TestSet_tracks.csv
+Data/TestSet_traj.csv
+Data/TrainSet_tracks.csv
+Data/TrainSet_traj.csv
+Data/ValSet_tracks.csv
+Data/ValSet_traj.csv
+Data/sample_traj.csv
+Data/sample_tracks.csv
+Data/ValSet_samples.csv
+Data/sample.csv
+Data/TestSet_samples.csv
+Data/TrainSet_samples.csv

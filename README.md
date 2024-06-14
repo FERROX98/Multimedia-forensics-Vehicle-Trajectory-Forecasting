@@ -34,6 +34,8 @@ Vehicle trajectory forecasting is a critical component in autonomous driving sys
   - `architecture.drawio`: A diagram representing the architecture of the model or system.
 
 - **Script/**: This directory contains additional scripts or tools related to the project.
+    - `main.py`: Pre processing script.
+
 
 - **SperimentalValue**: Contanis the data relative to training.
 
@@ -46,9 +48,7 @@ The preprocessing steps are as follows:
 
 1. Load Data: The data is loaded from the CSV file and preprocessed to remove duplicates and irrelevant entries. Each entry in the dataset contains information about a vehicle at a specific time frame.
 
-1. Add Dataset IDs: Since the dataset includes data from multiple locations, a unique dataset ID is assigned to each location to distinguish between them.
-
-2. Filter and Structure Data: The data is filtered and structured into appropriate formats to facilitate further processing and analysis. This involves organizing the data by location and vehicle ID.
+2. Filter and Structure Data: The data is filtered and structured into appropriate formats to facilitate further processing and analysis. This involves organizing the data by location and vehicle ID filtering it by vehicle ID, sorting the data by frame ID, and then extracting sequences between specified frame ranges (from frame 30 to frame -50). This ensures that each extracted sequence meets the required criteria for further analysis.
 
 3. Split Data: The dataset is split into training, validation, and test sets based on the specified ratios. This ensures that the model can be trained, validated, and tested on different subsets of the data.
 
@@ -61,15 +61,6 @@ For completeness, we have also considered a model based on YOLO for extracting i
 
 # Running Python Script for Training and Evaluation
 
-In this guide, we'll walk through the steps to run a Python script that trains and evaluates a machine learning model. Below are the necessary steps:
-
-## Step 1: Install Dependencies
-
-You'll need to install the required libraries for your machine learning project. You can install them using pip:
-
-```bash
-pip install -r requirements.txt
-```
 
 ## Train
 ```bash
