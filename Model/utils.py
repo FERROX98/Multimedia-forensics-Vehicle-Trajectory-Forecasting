@@ -19,7 +19,7 @@ def rmse(predicted_values, true_values):
 
 def load_args():
     with open(
-        "Multimedia-forensics-Vehicle-Trajectory-Forecasting/Model/Config/net_arguments.json",
+        "Model/Config/net_arguments.json",
         "r",
     ) as read_file:
         args = json.load(read_file)
@@ -27,10 +27,10 @@ def load_args():
 
 
 def load_dataset(t_h, t_f, batch_size=128):
-    #  trSet = ngsimDataset('Multimedia-forensics-Vehicle-Trajectory-Forecasting/Data/TrainSet.mat', t_h=t_h )
+    #  trSet = ngsimDataset('Data/TrainSet.mat', t_h=t_h )
     # TODO mocked for fast testing
     valSet = ngsimDataset(
-        "Multimedia-forensics-Vehicle-Trajectory-Forecasting/Data/ValSet.mat", t_h=t_h, t_f=t_f
+        "Data/ValSet.mat", t_h=t_h, t_f=t_f
     )
     trSet = valSet
 

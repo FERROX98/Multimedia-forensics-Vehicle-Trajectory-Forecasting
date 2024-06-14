@@ -13,11 +13,11 @@ class ngsimDataset(Dataset):
         i = 0
         print(mat_file)
         self.D = hdf5storage.loadmat(mat_file)["res_traj"]
-        # self.D = hdf5storage.loadmat("Multimedia-forensics-Vehicle-Trajectory-Forecasting/Data/TrainSet.mat")['res_traj']
+        # self.D = hdf5storage.loadmat("Data/TrainSet.mat")['res_traj']
         print(self.D.shape)
         self.T = hdf5storage.loadmat(mat_file)["res_t"]
-        # self.T = hdf5storage.loadmat("Multimedia-forensics-Vehicle-Trajectory-Forecasting/Data/ValSet.mat")['res_t']
-        # hdf5storage.savemat('Multimedia-forensics-Vehicle-Trajectory-Forecasting/Data/t.mat', {'res_t': self.T[:1,:]})
+        # self.T = hdf5storage.loadmat("Data/ValSet.mat")['res_t']
+        # hdf5storage.savemat('Data/t.mat', {'res_t': self.T[:1,:]})
         print(self.T.shape)
         self.t_h = t_h  # length of track history
         self.t_f = t_f  # length of predicted trajectory

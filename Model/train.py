@@ -49,7 +49,7 @@ def train(
 
             fut_pred = model(history, nbrs)
             
-            # Huber Loss 
+            # TODO try Huber Loss  or NLL
             loss = mse_loss(fut_pred, fut)
 
             # Backprop
@@ -87,8 +87,8 @@ def train(
 
         print("Epoch", epoch_num + 1, "complete. Calculating validation loss...")
 
-        writer.add_scalar("Multimedia-forensics-Vehicle-Trajectory-Forecasting/Data/accuracy_train", accuracy, epoch_num)
-        writer.add_scalar("Multimedia-forensics-Vehicle-Trajectory-Forecasting/Data/loss_train", loss, epoch_num)
+        writer.add_scalar("Data/accuracy_train", accuracy, epoch_num)
+        writer.add_scalar("Data/loss_train", loss, epoch_num)
 
         prev_val_loss = validate(valDataloader, model, writer, epoch_num)
 
@@ -97,7 +97,7 @@ def train(
 
         torch.save(
             model.state_dict(),
-            "Multimedia-forensics-Vehicle-Trajectory-Forecasting/Model/Config/custom.tar",
+            "Model/Config/custom.tar",
         )
 
         # TODO plot loss, accuracy, validation
@@ -134,7 +134,7 @@ def validate(valDataloader, model, writer, epoch_num):
         "| Validation loss :",
         format(avg_val_loss / val_batch_count, "0.4f"),
     )
-    writer.add_scalar("Multimedia-forensics-Vehicle-Trajectory-Forecasting/Data/validation_train", accuracy, epoch_num)
+    writer.add_scalar("Data/validation_train", accuracy, epoch_num)
     return avg_val_loss / val_batch_count
 
 

@@ -38,6 +38,27 @@ Vehicle trajectory forecasting is a critical component in autonomous driving sys
 - **SperimentalValue**: Contanis the data relative to training.
 
 
+## Pre Processing
+
+In this project, we are using a CSV file associated with the NGSIM dataset. The NGSIM dataset contains pre-extracted data about agents (vehicles) on the road, which includes various attributes such as vehicle ID, frame ID, position coordinates, velocity, acceleration, and more. The primary objective of this project is not to extract information from raw data but to predict the future trajectories of target vehicles using the provided dataset.
+
+The preprocessing steps are as follows:
+
+1. Load Data: The data is loaded from the CSV file and preprocessed to remove duplicates and irrelevant entries. Each entry in the dataset contains information about a vehicle at a specific time frame.
+
+1. Add Dataset IDs: Since the dataset includes data from multiple locations, a unique dataset ID is assigned to each location to distinguish between them.
+
+2. Filter and Structure Data: The data is filtered and structured into appropriate formats to facilitate further processing and analysis. This involves organizing the data by location and vehicle ID.
+
+3. Split Data: The dataset is split into training, validation, and test sets based on the specified ratios. This ensures that the model can be trained, validated, and tested on different subsets of the data.
+
+4. Create Tracks: Vehicle tracks are created for each location. A track consists of the trajectory of a vehicle over time, capturing its movement and attributes frame by frame.
+
+5. Filter Edge Cases: Trajectories with insufficient frames are filtered out to ensure the model has enough data to make accurate predictions.
+
+## Extraction From Video Sequence
+For completeness, we have also considered a model based on YOLO for extracting information from video sequences. YOLO is a state-of-the-art, real-time object detection system that can identify and locate multiple objects in video frames with high accuracy.
+
 # Running Python Script for Training and Evaluation
 
 In this guide, we'll walk through the steps to run a Python script that trains and evaluates a machine learning model. Below are the necessary steps:

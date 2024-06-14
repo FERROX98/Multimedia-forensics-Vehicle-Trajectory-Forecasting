@@ -40,18 +40,18 @@ class highwayNet(nn.Module):
 
         # Encoder LSTM
         self.target_enc_lstm = torch.nn.LSTM(
-            args["in_target_embedding_size"], args["target_encoder_size"], 1
+            args["in_target_embedding_size"], args["target_encoder_size"], 1, dropout=0.2
         )
 
         # Encoder LSTM
         self.nbrs_encoder_lstm = torch.nn.LSTM(
-            args["in_nbrs_embedding_size"], args["nbrs_encoder_size"], 1
+            args["in_nbrs_embedding_size"], args["nbrs_encoder_size"], 1,  dropout=0.2
         )
 
         # Decoder LSTM
         self.dec_lstm = torch.nn.LSTM(
             args["nbrs_encoder_size"] + args["target_encoder_size"],
-            args["decoder_size"],
+            args["decoder_size"], dropout=0.2
         )
 
         # Output layers:
@@ -104,7 +104,19 @@ class highwayNet(nn.Module):
         #     print("fut_pred.shape3: ", fut_pred.shape)
             
         return fut_pred
-
+    
+    def gaussian_bivariate_distribution(self,out):
+        
+        mux = out[:,:,1]
+        muy = out[:,:,2]
+        varx = out[:,:,3]
+        vary = out[:,:,4]
+        rho = torch.tanh(out[:,:,5]) # because covariance must be between -1 and 1 in order to not have negative determinant (det(cov) = varx*vary - (rho)^2) 
+        return torch.cat((mux,muy,varx,vary,rho),dim=2)
+        
+        
+    
+    
     # def decode_by_step(self, enc):
 
     #     pre_traj = []
