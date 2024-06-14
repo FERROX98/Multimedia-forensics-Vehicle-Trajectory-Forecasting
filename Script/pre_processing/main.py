@@ -1,3 +1,5 @@
+import datetime
+import multiprocessing
 import os
 import time
 from natsort import natsorted
@@ -5,272 +7,239 @@ import numpy as np
 import pandas as pd
 from scipy.io import savemat
 from collections import defaultdict
+import hdf5storage
+import h5py
+# from multiprocessing import Process
 
-start_time = time.time()
+
+import csv
+
+from tqdm import tqdm
+
+start_time = datetime.datetime.now()
 # Dataset Fields before preprocessing
-ds_id = 0
+
 (
+    location,
     vehicle_id,
     frame_id,
-    total_frames,
     global_time,
-    
     local_x,
     local_y,
     global_x,
     global_y,
-    
     v_length,
     v_width,
     v_class,
     v_vel,
-    
     v_acc,
     lane_id,
-    o_zone,
-    d_zone,
-    
-    int_id,
-    section_id,
     direction,
-    movement,
-    
     preceding,
     following,
     space_headway,
-    time_headway,
-    
-    location,
-) = range(25)
+) = range(18)
 
-def split_data(traj_all, train_ratio, val_ratio, subset):
-    traj_tr = []
-    traj_val = []
-    traj_ts = []
+headers = {
+    "Vehicle_ID": "Int64",
+    "Frame_ID": "Int64",
+    "Total_Frames": "Int64",
+    "Global_Time": "Int64",
+    "Local_X": float,
+    "Local_Y": float,
+    "Global_X": float,
+    "Global_Y": float,
+    "v_length": float,
+    "v_Width": float,
+    "v_Class": "Int64",
+    "v_Vel": float,
+    "v_Acc": float,
+    "Lane_ID": "Int64",
+    "O_Zone": str,
+    "D_Zone": str,
+    "Int_ID": str,
+    "Section_ID": str,
+    "Direction": str,
+    "Movement": str,
+    "Preceding": "Int64",
+    "Following": "Int64",
+    "Space_Headway": float,
+    "Time_Headway": "float",
+    " Location": str,
+}
 
-    for k in range(1, subset + 1):
-        # filter by dataset id
-        subset = traj_all[traj_all[:, ds_id] == k]
-        ul1 = int(train_ratio * subset.shape[0])
-        ul2 = int((train_ratio + val_ratio) * subset.shape[0])
+headers_reduced = [
+    "Location",
+    "Vehicle_ID",
+    "Frame_ID",
+    "Global_Time",
+    "Local_X",
+    "Local_Y",
+    "Global_X",
+    "Global_Y",
+    "v_length",
+    "v_Width",
+    "v_Class",
+    "v_Vel",
+    "v_Acc",
+    "Lane_ID",
+    "Direction",
+    "Preceding",
+    "Following",
+    "Space_Headway",
+]
 
-        traj_tr.append(subset[:ul1])
-        traj_val.append(subset[ul1:ul2])
-        traj_ts.append(subset[ul2:])
 
-    return np.vstack(traj_tr), np.vstack(traj_val), np.vstack(traj_ts)
+def append_par(subset, return_dict, _type):
+    return_dict[_type] = subset
+    return_dict[_type + "_s"] = filter_edge_cases_loc(subset)
 
+
+def split_data(
+    subset,
+    train_ratio,
+    val_ratio,
+    traj_tr,
+    traj_val,
+    traj_ts,
+    sample_tr,
+    sample_val,
+    sample_ts
+):
+
+    print("Splitting data", subset.shape)
+    ul1 = int(train_ratio * subset.shape[0])
+    ul2 = int((train_ratio + val_ratio) * subset.shape[0])
+ 
+    # p_tr = Process(target=append_par, args=(subset[:ul1], return_dict, "tr"))
+    # p_tr.start()
+
+    # p_val = Process(
+    #     target=append_par, args=(subset[ul1:ul2], return_dict, "val")
+    # )
+    # p_val.start()
+
+    # p_ts = Process(target=append_par, args=(subset[ul2:], return_dict, "ts"))
+    # p_ts.start()
+
+    # p_tr.join()
+    # p_val.join()
+    # p_ts.join()
+
+    # traj_tr.extend(return_dict["tr"])
+    # traj_val.extend(return_dict["val"])
+    # traj_ts.extend(return_dict["ts"])
+    # sample_tr.extend(return_dict["tr_s"])
+    # sample_val.extend(return_dict["val_s"])
+    # sample_ts.extend(return_dict["ts_s"])
+
+    traj_tr.extend(subset[:ul1])
+    traj_val.extend(subset[ul1:ul2])
+    traj_ts.extend(subset[ul2:])
+    sample_tr.extend(filter_edge_cases_loc(subset[:ul1]))
+    sample_val.extend(filter_edge_cases_loc(subset[ul1:ul2]))
+    sample_ts.extend(filter_edge_cases_loc(subset[ul2:]))
 
 def preprocess_ngsim():
-
+    
+  
     # Path
     path_csv = "Data/cutted.csv"
-    #path_csv = "Data/NGSIM_20240603.csv"
-    # Vehicle_ID,Frame_ID,Total_Frames,Global_Time,Local_X,Local_Y,Global_X,Global_Y,v_length,
-    # v_Width,v_Class,v_Vel,v_Acc,Lane_ID,O_Zone,D_Zone,Int_ID,Section_ID,Direction,Movement,
-    # Preceding,Following,Space_Headway,Time_Headway,Location
+    path_csv = "Data/NGSIM_20240603.csv"
 
     # Load data and add dataset ids
     traj = []
-    data = pd.read_csv(path_csv, engine="c")
-    data = data.drop_duplicates(subset=["Vehicle_ID", "Global_Time", "Location"])
+    data = pd.read_csv(path_csv, engine="c", dtype=headers, na_values=["-1"])
+    data = data.drop_duplicates(subset=["Vehicle_ID", "Frame_ID", "Location"])
 
-    global ds_id, vehicle_id, frame_id, total_frames, global_time, local_x, local_y, global_x, global_y, v_length, v_width, v_class, v_vel, v_acc, lane_id, o_zone, d_zone, int_id, section_id, direction, movement, preceding, following, space_headway, time_headway, location
-    
     # location
     locations = data["Location"].unique()
 
+    traj_tr = []
+    traj_val = []
+    traj_ts = []
+    sample_tr = []
+    sample_val = []
+    sample_ts = []
+
     for i, loc in enumerate(locations):
-        dataset_id = (i + 1) * np.ones((data[data["Location"] == loc].shape[0], 1))
-        traj.append(np.hstack((dataset_id, data[data["Location"] == loc])))
+        traj = data[data["Location"] == loc][headers_reduced]
+        split_data(
+            traj.to_numpy(),
+            0.70,
+            0.1,
+            traj_tr,
+            traj_val,
+            traj_ts,
+            sample_tr,
+            sample_val,
+            sample_ts
+        )
 
-    (
-        ds_id,
-        vehicle_id,
-        frame_id,
-        total_frames,
-        
-        global_time,
-        local_x,
-        local_y,
-        global_x,
-        
-        global_y,
-        v_length,
-        v_width,
-        v_class,
-        
-        v_vel,
-        v_acc,
-        lane_id,
-        o_zone,
-        
-        d_zone,
-        int_id,
-        section_id,
-        direction,
-        
-        movement,
-        preceding,
-        following,
-        space_headway,
-        
-        time_headway,
-        location,
-        
-    ) = range(26)
+    traj_tr, traj_val, traj_ts = np.asarray(traj_tr), np.asarray(traj_val), np.asarray(traj_ts)
+    sample_tr, sample_val, sample_ts = (
+        np.asarray(sample_tr),
+        np.asarray(sample_val),
+        np.asarray(sample_ts),
+    )
 
-    vehTrajs = [defaultdict(list) for _ in range(len(locations))]
-    vehTimes = [defaultdict(list) for _ in range(len(locations))]
-
-    for loc in range(len(locations)):
-        # get only the columns we need
-        traj[loc] = traj[loc][
-            :,
-            [   
-                ds_id,
-                vehicle_id,
-                frame_id,
-                global_time,
-                local_x,
-                
-                local_y,
-                global_x,
-                global_y,
-                v_length,
-                
-                v_width,
-                v_vel,
-                v_acc,
-                lane_id,
-                
-                section_id,
-                direction,
-                movement,
-                preceding,
-                
-                following,
-            ],
-        ]
-
-        for vehicle_data in traj[loc]:
-            # vehicle_id state for vehicle_index from the header of the csv file
-            veh_id = int(vehicle_data[vehicle_id])
-            frame_num = int(vehicle_data[frame_id])
-            vehTrajs[loc][veh_id].append(vehicle_data)
-            vehTimes[loc][frame_num].append(vehicle_data)
-            # vehTrajs = {loc: {veh_id: [vehicle_data, vehicle_data, ...]}}
-            # vehTimes = {frame_num: [vehicle_data, vehicle_data, ...]}
-    (
-        ds_id,
-        vehicle_id,
-        frame_id,
-        global_time,
-        local_x,
-        
-        local_y,
-        global_x,
-        global_y,
-        v_length,
-        
-        v_width,
-        v_vel,
-        v_acc,
-        lane_id,
-        
-        section_id,
-        direction,
-        movement,
-        preceding,
-        
-        following
-    ) = range(18)
- 
-
+    print("Trajectories: ", traj_tr.shape, traj_val.shape, traj_ts.shape)
     
-    # the resulting list is in the form of [ [location_id, vehicle_id, frame_id, ...], ...]
-    traj_all = np.vstack(traj)
-    traj_tr, traj_val, traj_ts = split_data(traj_all, 0.75, 0.1, len(locations))
-    
-    # just reorganizing the data
-    tracks_tr = create_tracks(traj_tr, len(locations))
-    tracks_val = create_tracks(traj_val, len(locations))
-    tracks_ts = create_tracks(traj_ts, len(locations))
+    if sample_tr.shape[0] == 0:
+        print("No data to save for training")
+    else:
+        save_mat("Data/TrainSet", traj_tr, sample_tr)
 
-    # keep only the trajectories that have at least 80 frames
-    traj_tr = filter_edge_cases(traj_tr, tracks_tr)
-    traj_val = filter_edge_cases(traj_val, tracks_val)
-    traj_ts = filter_edge_cases(traj_ts, tracks_ts)
-    
-    # use trajectory as samples (target vehicle) and tracks for get the neighbors of the samples
+    if sample_val.shape[0] == 0:
+        print("No data to save for validation")
+    else:
+        save_mat("Data/ValSet", traj_val, sample_val)
 
-    save_mat("Data/TrainSet_new.mat", traj_tr, tracks_tr)
-    save_mat("Data/ValSet_new.mat", traj_val, tracks_val)
-    save_mat("Data/TestSet_new.mat", traj_ts, tracks_ts)
+    if sample_ts.shape[0] == 0:
+        print("No data to save for testing")
+    else:
+        save_mat("Data/TestSet", traj_ts, sample_ts)
 
 
-def create_tracks(traj, subset):
-    tracks = {}
-    for k in range(1, subset + 1):
-        
-        # filter by location
-        traj_set = traj[traj[:, 0] == k]
-        car_ids = np.unique(traj_set[:, vehicle_id])
-        tracks[k] = {}
-        for car_id in car_ids:
-            vehtrack = traj_set[traj_set[:, vehicle_id] == car_id][
-                :,
-                [   ds_id,
-                    vehicle_id,
-                    frame_id,
-                    global_time,
-                    local_x,
-                    local_y,
-                    global_x,
-                    global_y,
-                    v_length,
-                    v_width,
-                    v_vel,
-                    v_acc,
-                    lane_id,
-                    section_id,
-                    direction,
-                    movement,
-                    preceding,
-                    following,
-                ],
-            ].T
-            tracks[k][int(car_id)] = vehtrack
-
-    return tracks
-
-
-def filter_edge_cases(traj, tracks):
+def filter_edge_cases_loc(traj):
     inds = []
-    for k, data in enumerate(traj):
-        loc = int(data[ds_id])  # dataset ID (Location)
-        vid = int(data[vehicle_id])  # Vehicle ID
-        t = int(data[frame_id])  # frame
+    track_location = traj
+    only_vehic_id = track_location[:, vehicle_id]
+    car_ids = np.unique(only_vehic_id)
+    for vid in tqdm(car_ids, desc="Filtering edge cases (loc)"):
 
-        if vid in tracks[loc]:
-            track_data = tracks[loc][vid]
-            total_frames = track_data.shape[1]
-            if total_frames >= 30 + 50:  # Need at least 33 frames (30 + 3) + 50 future frames
-                
-                # TODO check that are consecutive frames
-                sorted_frames = natsorted(track_data[frame_id, : ]) 
-                first_frame = sorted_frames[0]
-                last_frame = sorted_frames[-1]
-                if first_frame <= t - 27 and last_frame > t + 50:
-                    inds.append(k)
-    return traj[inds]
+        filter_vehicle = only_vehic_id == vid
+        sorted_frames = natsorted(track_location[filter_vehicle])
+        total_frames = len(sorted_frames)
+
+        if total_frames >= 30 + 50:  # Need at least 30 + 50  frames
+            k = sorted_frames[29:-50]
+            if len(k) > 0:
+                inds.extend(k)
+
+    if len(inds) == 0:
+        return np.array([])
+    return inds
 
 
-def save_mat(filename, traj, tracks):
-    savemat(filename, {"traj": traj, "tracks": tracks})
+def save_mat(filename, tracks, samples):
+    print(filename)
+
+    df = pd.DataFrame(samples)
+    df.to_csv(filename + "_traj.csv", header=headers_reduced, index=False)
+
+    df = pd.DataFrame(tracks)
+    df.to_csv(filename + "_tracks.csv", header=headers_reduced, index=False)
+
+    print("Saved samples: ", samples.shape, " to ", filename)
+    print("Saved n_tracks: ", len(tracks), " to ", filename)
 
 
 if __name__ == "__main__":
+    
+    # manager = multiprocessing.Manager()
+    # return_dict = manager.dict()    
     preprocess_ngsim()
-    end_time = time.time()
+    end_time = datetime.datetime.now()
     print("Time preprocessing: ", end_time - start_time)
+    
