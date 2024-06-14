@@ -110,28 +110,6 @@ def split_data(
     print("Splitting data", subset.shape)
     ul1 = int(train_ratio * subset.shape[0])
     ul2 = int((train_ratio + val_ratio) * subset.shape[0])
- 
-    # p_tr = Process(target=append_par, args=(subset[:ul1], return_dict, "tr"))
-    # p_tr.start()
-
-    # p_val = Process(
-    #     target=append_par, args=(subset[ul1:ul2], return_dict, "val")
-    # )
-    # p_val.start()
-
-    # p_ts = Process(target=append_par, args=(subset[ul2:], return_dict, "ts"))
-    # p_ts.start()
-
-    # p_tr.join()
-    # p_val.join()
-    # p_ts.join()
-
-    # traj_tr.extend(return_dict["tr"])
-    # traj_val.extend(return_dict["val"])
-    # traj_ts.extend(return_dict["ts"])
-    # sample_tr.extend(return_dict["tr_s"])
-    # sample_val.extend(return_dict["val_s"])
-    # sample_ts.extend(return_dict["ts_s"])
 
     traj_tr.extend(subset[:ul1])
     traj_val.extend(subset[ul1:ul2])
