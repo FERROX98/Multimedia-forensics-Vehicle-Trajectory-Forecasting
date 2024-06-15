@@ -1,45 +1,13 @@
 import datetime
-import multiprocessing
-import os
-import time
 from natsort import natsorted
 import numpy as np
 import pandas as pd
-from scipy.io import savemat
-from collections import defaultdict
-import hdf5storage
-import h5py
-# from multiprocessing import Process
-
-
-import csv
-
+from header_enum import DatasetFields
 from tqdm import tqdm
 
 start_time = datetime.datetime.now()
+
 # Dataset Fields before preprocessing
-
-(
-    location,
-    vehicle_id,
-    frame_id,
-    global_time,
-    local_x,
-    local_y,
-    global_x,
-    global_y,
-    v_length,
-    v_width,
-    v_class,
-    v_vel,
-    v_acc,
-    lane_id,
-    direction,
-    preceding,
-    following,
-    space_headway,
-) = range(18)
-
 headers = {
     "Vehicle_ID": "Int64",
     "Frame_ID": "Int64",
@@ -104,7 +72,7 @@ def split_data(
     traj_ts,
     sample_tr,
     sample_val,
-    sample_ts
+    sample_ts,
 ):
 
     print("Splitting data", subset.shape)
@@ -118,9 +86,9 @@ def split_data(
     sample_val.extend(filter_edge_cases_loc(subset[ul1:ul2]))
     sample_ts.extend(filter_edge_cases_loc(subset[ul2:]))
 
+
 def preprocess_ngsim():
-    
-  
+
     # Path
     path_csv = "Data/cutted.csv"
     path_csv = "Data/NGSIM_20240603.csv"
@@ -129,6 +97,9 @@ def preprocess_ngsim():
     traj = []
     data = pd.read_csv(path_csv, engine="c", dtype=headers, na_values=["-1"])
     data = data.drop_duplicates(subset=["Vehicle_ID", "Frame_ID", "Location"])
+
+    # Filter class Auto
+    data = data[data["v_Class"] == 2]
 
     # location
     locations = data["Location"].unique()
@@ -151,10 +122,14 @@ def preprocess_ngsim():
             traj_ts,
             sample_tr,
             sample_val,
-            sample_ts
+            sample_ts,
         )
 
-    traj_tr, traj_val, traj_ts = np.asarray(traj_tr), np.asarray(traj_val), np.asarray(traj_ts)
+    traj_tr, traj_val, traj_ts = (
+        np.asarray(traj_tr),
+        np.asarray(traj_val),
+        np.asarray(traj_ts),
+    )
     sample_tr, sample_val, sample_ts = (
         np.asarray(sample_tr),
         np.asarray(sample_val),
@@ -162,7 +137,7 @@ def preprocess_ngsim():
     )
 
     print("Trajectories: ", traj_tr.shape, traj_val.shape, traj_ts.shape)
-    
+
     if sample_tr.shape[0] == 0:
         print("No data to save for training")
     else:
@@ -182,7 +157,7 @@ def preprocess_ngsim():
 def filter_edge_cases_loc(traj):
     inds = []
     track_location = traj
-    only_vehic_id = track_location[:, vehicle_id]
+    only_vehic_id = track_location[:, DatasetFields.VEHICLE_ID.value]
     car_ids = np.unique(only_vehic_id)
     for vid in tqdm(car_ids, desc="Filtering edge cases (loc)"):
 
@@ -214,10 +189,9 @@ def save_mat(filename, tracks, samples):
 
 
 if __name__ == "__main__":
-    
+
     # manager = multiprocessing.Manager()
-    # return_dict = manager.dict()    
+    # return_dict = manager.dict()
     preprocess_ngsim()
     end_time = datetime.datetime.now()
     print("Time preprocessing: ", end_time - start_time)
-    
