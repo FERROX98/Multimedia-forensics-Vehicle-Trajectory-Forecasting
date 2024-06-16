@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 import datetime
-import sys 
+import sys
+from tqdm import tqdm
 sys.path.insert(1, 'Script/pre_processing')
 
 from natsort import natsorted
@@ -185,14 +186,14 @@ class ngsimDataset(Dataset):
 
         for sampleId, (hist, neighbors, fut, t, locId, vehId) in enumerate(samples):
           
-            veh_ID_batch[sampleId, :]= torch.tensor(vehId)
-            time_batch[sampleId, :]= torch.tensor(t)
+            veh_ID_batch[sampleId, :]= torch.tensor(vehId).type(torch.int64)
+            time_batch[sampleId, :]= torch.tensor(t).type(torch.int64)
             dsID_batch.append(locId)
        
-            hist_batch[0:len(hist), sampleId, :] = torch.from_numpy(hist[:, :].astype(np.float32))
-            fut_batch[0:len(fut), sampleId, :] = torch.from_numpy(fut[:, :].astype(np.float32))
+            hist_batch[0:len(hist), sampleId, :] = torch.from_numpy(hist[:, :].astype(np.float32)).type(torch.float)
+            fut_batch[0:len(fut), sampleId, :] = torch.from_numpy(fut[:, :].astype(np.float32)).type(torch.float)
             
-            nbrs_batch[:,sampleId, :,:] = torch.from_numpy(np.asarray(neighbors).astype(np.float32)).permute(1,0,2)
+            nbrs_batch[:,sampleId, :,:] = torch.from_numpy(np.asarray(neighbors).astype(np.float32)).type(torch.float).permute(1,0,2) 
     
         return (
             hist_batch,
@@ -223,15 +224,15 @@ if __name__ == '__main__':
     
     trDataloader = DataLoader(
         tr_set,
-        batch_size=48,
+        batch_size=12,
         shuffle=True,
         num_workers=2,
         collate_fn=tr_set.collate_fn,
-        pin_memory=True,
+        pin_memory=False,
     )
    
-    for i, data in enumerate(trDataloader):
+    for i, data in enumerate(tqdm(trDataloader)):
             history, nbrs, fut, _, _, _ = data
             end_time = datetime.datetime.now()
             print("time taken to load data", end_time-st_time)
-            break
+            #break

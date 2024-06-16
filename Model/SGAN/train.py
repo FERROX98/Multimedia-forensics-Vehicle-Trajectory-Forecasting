@@ -1,9 +1,10 @@
 from __future__ import print_function
 import torch
-from losses import gan_d_loss, gan_g_loss, l2_loss
+from tqdm import tqdm
 from models import highwayNetDiscriminator, highwayNetGenerator
 import sys
-
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 sys.path.insert(1, "Model")
 from utils import (
     clean_train_values,
@@ -22,8 +23,8 @@ import datetime
 import logging
 
 FORMAT = "[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s"
-# logging.basicConfig(level=logging.INFO, format=FORMAT, stream=sys.dev)
-# logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format=FORMAT, stream=sys.stdout)
+logger = logging.getLogger(__name__)
 from torch import nn
 from tensorboardX import SummaryWriter
 
@@ -57,7 +58,7 @@ def train(
         g_steps_left = 1
         flg_init = False
         st_time_load_dataset = datetime.datetime.now()
-        for i, data in enumerate(trDataloader):
+        for i, data in enumerate(tqdm(trDataloader)):
             st_time = datetime.datetime.now()
             if not flg_init:
                 print("Time to load dataset: ", st_time - st_time_load_dataset)
@@ -88,11 +89,11 @@ def train(
                 g_steps_left -= 1
 
             torch.cuda.synchronize()
-
+            print("Time 1: %s", datetime.datetime.now() - st_time)
             # Skip the rest if we are not at the end of an iteration
             if d_steps_left > 0 or g_steps_left > 0:
                 continue
-
+            print("Time 2 : %s", datetime.datetime.now() - st_time)
             # reset steps
             d_steps_left = 1
             g_steps_left = 1
