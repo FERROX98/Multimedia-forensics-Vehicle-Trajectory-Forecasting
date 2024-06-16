@@ -148,24 +148,31 @@ def validate(
 
     d_steps_left = 1
     g_steps_left = 1
+    
     generator.eval()
     discriminator.eval()
+    
     loss_g = 0
     loss_d = 0
-    acc = 0.0
-    tot_traj = 0
     n_loss_count_d = 0
     n_loss_count_g = 0
+    
+    acc = 0.0
+    tot_traj = 0
+    
     flg_init = False
     st_time_load_dataset = datetime.datetime.now()
+    
     with torch.no_grad():
         for i, data in enumerate(valDataloader):
+            
             if not flg_init:
                 print(
                     "Time to load Val dataset: ",
                     datetime.datetime.now() - st_time_load_dataset,
                 )
                 flg_init = True
+                
             history, nbrs, fut, _, _, _ = data
             history = history.cuda()
             nbrs = nbrs.cuda()
@@ -216,6 +223,7 @@ def validate(
         acc = 100 * (acc / tot_traj)
         loss_d = loss_d / n_loss_count_d
         loss_g = loss_g / n_loss_count_g
+        
         print(
             "Accuracy_val_D: ",
             format(acc, "0.4f"),
@@ -224,6 +232,7 @@ def validate(
             "| Avg val loss_G:",
             format(loss_g, "0.4f"),
         )
+        
         writer.add_scalar("Data/accuracy_val_D", acc, epoch_num)
         writer.add_scalar("Data/loss_val_D", loss_d, epoch_num)
         writer.add_scalar("Data/loss_val_G", loss_g, epoch_num)
@@ -328,6 +337,7 @@ if __name__ == "__main__":
     # mem_usg_d= get_model_memory_usage(dis,input_size)
     print("Memory usage of generator: ", mem_usg_g)
     # print("Memory usage of discriminator: ", mem_usg_d)
+    
     # Load dataset
     trDataloader, valDataloader = load_dataset(
         30, 50

@@ -19,6 +19,8 @@ headers_reduced = [
 ]
 
 headers = get_header_type()
+
+
 class ngsimDataset(Dataset):
 
     def __init__(
@@ -88,9 +90,6 @@ class ngsimDataset(Dataset):
         column = np.linspace(min_y, max_y, self.grid_size[1])
         rows = np.linspace(min_x, max_x,  self.grid_size[0])
 
-        # plt.scatter(data[:, 0], data[:, 1])
-        # plt.scatter(mid_x, mid_y, color='r')
-        # plt.show()
 
         for x_row in rows:
             for y_column in column:
@@ -150,6 +149,7 @@ class ngsimDataset(Dataset):
                     neighbors.append(hist_nbrs)
 
         return hist, neighbors, fut, t, locId, vehId
+    
     ## Helper function to get track history
     def getHistory(self, locId, vehId, t, all_tracks):
 

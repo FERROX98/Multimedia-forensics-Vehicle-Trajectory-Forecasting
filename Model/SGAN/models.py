@@ -5,9 +5,14 @@ import torch
 import torch.nn as nn
 import torch
 import torch.nn as nn
-
-
-
+"""
+This is Model class for the HighwayNet model, which is a LSTM based model
+for vehicle trajectory forecasting.
+and inspired by :
+https://github.com/nachiket92/conv-social-pooling/blob/master
+and 
+https://github.com/agrimgupta92/sgan
+"""
 
 class highwayNetDiscriminator(nn.Module):
     def __init__(
@@ -31,8 +36,7 @@ class highwayNetDiscriminator(nn.Module):
 
         self.spatial_embedding = nn.Linear(2, embedding_dim)
         self.relu = torch.nn.ReLU()
-        real_classifier_dims = [h_dim, mlp_dim, 1]
-        self.real_classifier = nn.Sequential(nn.Dropout(p=0.2), nn.Linear(h_dim, 1, 1), nn.Sigmoid() )
+        self.real_classifier = nn.Sequential(nn.Dropout(p=0.2), nn.Linear(h_dim, 1, 1), nn.Sigmoid())
         
     def init_hidden(self, batch):
         return (
@@ -40,7 +44,7 @@ class highwayNetDiscriminator(nn.Module):
             torch.zeros(1, batch, self.h_dim).cuda(),
         )
 
-    def forward(self, traj, seq_start_end=None):
+    def forward(self, traj):
         """
         Inputs:
         - traj: Tensor of shape (obs_len + pred_len, batch, 2)
@@ -54,13 +58,6 @@ class highwayNetDiscriminator(nn.Module):
         obs_traj_embedding = obs_traj_embedding.view(-1, batch, self.embedding_dim)
         state_tuple = self.init_hidden(batch)
         _, (h_state,_) = self.encoder(obs_traj_embedding, state_tuple)
-      
-        
-        # Note: In case of 'global' option we are using start_pos as opposed to
-        # end_pos. The intution being that hidden state has the whole
-        # trajectory and relative postion at the start when combined with
-        # trajectory information should help in discriminative behavior.
-
         classifier_input = h_state.squeeze()
        
         scores = self.real_classifier(classifier_input)
@@ -68,15 +65,6 @@ class highwayNetDiscriminator(nn.Module):
 
 
 
-
-"""
-This is Model class for the HighwayNet model, which is a LSTM based model
-for vehicle trajectory forecasting.
-and inspired by :
-https://github.com/nachiket92/conv-social-pooling/blob/master
-and 
-https://github.com/agrimgupta92/sgan
-"""
 class highwayNetGenerator(nn.Module):
 
     # Initialization
@@ -131,12 +119,12 @@ class highwayNetGenerator(nn.Module):
         if self.debug:
             print("hist.shape: ", hist.shape)
             print("nbrs.shape: ", nbrs.shape)
+            
         batch = hist.size(1)
-        fc_out_history = self.leaky_relu(self.input_target_layer(hist))
         
+        fc_out_history = self.leaky_relu(self.input_target_layer(hist))
         _, (hist_enc, _) = self.target_enc_lstm(fc_out_history)
     
- 
         fc_out_nbrs = self.leaky_relu(self.input_target_layer(nbrs.view(-1, 2)))
         fc_out_nbrs = fc_out_nbrs.view(-1, batch,  self.args["in_nbrs_embedding_size"])
         _, (nbrs_enc, _) = self.target_enc_lstm(fc_out_nbrs)
@@ -155,13 +143,13 @@ class highwayNetGenerator(nn.Module):
         batch = encoder_h.size(1)
         pred_traj_fake_rel = []
         state_tuple = self.init_hidden(batch)
+        
         for _ in range(25):
             
             output, state_tuple = self.dec_lstm(encoder_h,state_tuple)
             fut_pred = self.output_layer(state_tuple[0])
             fut_pred = self.gaussian_bivariate_distribution(fut_pred)
-                                                       #fut_pred[:, :, 1:2+1]
-            #fut_pred = torch.squeeze(fut_pred, 0)
+    
             pred_traj_fake_rel.append(fut_pred)
 
         pred_traj_fake_rel = torch.stack(pred_traj_fake_rel, dim=-1)
