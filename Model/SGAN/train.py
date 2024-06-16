@@ -136,8 +136,13 @@ def validate(valDataloader, generator, discriminator, writer, epoch_num, g_loss_
     tot_traj = 0
     n_loss_count_d = 0
     n_loss_count_g = 0
+    flg_init=False
+    st_time_load_dataset = datetime.datetime.now()
     with torch.no_grad():
         for i, data in enumerate(valDataloader):
+            if not flg_init:
+                print("Time to load Val dataset: ", datetime.datetime.now() - st_time_load_dataset)
+                flg_init=True
             history, nbrs, fut, _, _, _ = data
             history = history.cuda()
             nbrs = nbrs.cuda()
