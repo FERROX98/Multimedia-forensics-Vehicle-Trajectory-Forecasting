@@ -1,10 +1,14 @@
 from __future__ import print_function, division
+import datetime
 import json
 import torch
+import sys 
+sys.path.insert(1, 'Model/SGAN')
+from models import highwayNetDiscriminator, highwayNetGenerator
 from dataset import ngsimDataset
 from model import highwayNet
 from torch.utils.data import DataLoader
-
+import os, shutil
 
 
 def rmse(predicted_values, true_values):
@@ -26,28 +30,37 @@ def load_args():
     return args
 
 
-def load_dataset(t_h, t_f, batch_size=128):
+def load_dataset(t_h, t_f, batch_size=24):
     #  trSet = ngsimDataset('Data/TrainSet.mat', t_h=t_h )
     # TODO mocked for fast testing
+    # valSet = ngsimDataset(
+    #     "Data/sample_tracks.csv","Data/sample.csv"
+    # )
     valSet = ngsimDataset(
-        "Data/ValSet.mat", t_h=t_h, t_f=t_f
+        "Data/ValSet_tracks.csv","Data/ValSet_samples.csv"
     )
-    trSet = valSet
-
+    
+    trSet =  ngsimDataset(
+        "Data/TestSet_tracks.csv","Data/TestSet_samples.csv"
+    )
+    #st_time = datetime.datetime.now()
     trDataloader = DataLoader(
+        trSet,
+        batch_size=batch_size,
+       # shuffle=True,
+        num_workers=0,
+        collate_fn=trSet.collate_fn,
+        pin_memory=True,
+    )
+    valDataloader =  DataLoader(
         valSet,
         batch_size=batch_size,
-        shuffle=True,
-        num_workers=8,
+       # shuffle=True,
+        num_workers=0,
         collate_fn=valSet.collate_fn,
+        pin_memory=True,
     )
-    valDataloader = DataLoader(
-        valSet,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=8,
-        collate_fn=valSet.collate_fn,
-    )
+   # print("time taken to load data", datetime.datetime.now()-st_time)
     return trDataloader, valDataloader
 
 ## Batchwise NLL loss, uses mask for variable output lengths
@@ -83,8 +96,53 @@ def maskedNLL(y_pred, y_gt):
         lossVal = torch.sum(nll_loss) / torch.sum(mask)
 
     return lossVal
+
+def clean_train_values(folder):
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
 # Initialize network
 def init_model(args):
-    model = highwayNet(args)
-    model = model.cuda()
-    return model
+    gen = highwayNetGenerator(args)
+  
+    dis = highwayNetDiscriminator(args)
+    
+    
+    gen = gen.cuda()
+    dis = dis.cuda()
+    return gen, dis
+
+def get_model_memory_usage_gen(model, input_size,input_size_2):
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    activations = model(torch.randn(*input_size,*input_size_2))
+    activations_memory = activations.element_size() * activations.nelement()
+    total_memory = activations_memory + params * 4  # assuming 4 bytes per parameter
+    return total_memory / (1024 ** 2)  # convert to megabytes
+
+def get_model_memory_usage_gen(model, input_size,input_size_2):
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    activations = model(torch.randn(*input_size).cuda(),torch.randn(*input_size_2).cuda())
+    activations_memory = activations.element_size() * activations.nelement()
+    total_memory = activations_memory + params * 4  # assuming 4 bytes per parameter
+    return total_memory / (1024 ** 2)  # convert to megabytes
+
+
+def get_model_memory_usage(model, input_size):
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    activations = model(torch.randn(*input_size))
+    activations_memory = activations.element_size() * activations.nelement()
+    total_memory = activations_memory + params * 4  # assuming 4 bytes per parameter
+    return total_memory / (1024 ** 2)  # convert to megabytes
+# def get_model_memory_usage(batch_size, model):
+#     # return the memory usage in MB
+#     return batch_size * get_model_memory_usage_per_sample(model)
+
+def get_model_memory_usage_per_sample(model):
+    # return the memory usage in MB
+    return sum([param.nelement() * param.element_size() for param in model.parameters()]) / (1024 ** 2)

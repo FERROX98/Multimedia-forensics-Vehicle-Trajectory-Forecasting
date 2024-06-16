@@ -2,59 +2,16 @@ import datetime
 from natsort import natsorted
 import numpy as np
 import pandas as pd
-from header_enum import DatasetFields
+from header_enum import DatasetFields, HeaderReduced, get_header_type
 from tqdm import tqdm
 
 start_time = datetime.datetime.now()
 
 # Dataset Fields before preprocessing
-headers = {
-    "Vehicle_ID": "Int64",
-    "Frame_ID": "Int64",
-    "Total_Frames": "Int64",
-    "Global_Time": "Int64",
-    "Local_X": float,
-    "Local_Y": float,
-    "Global_X": float,
-    "Global_Y": float,
-    "v_length": float,
-    "v_Width": float,
-    "v_Class": "Int64",
-    "v_Vel": float,
-    "v_Acc": float,
-    "Lane_ID": "Int64",
-    "O_Zone": str,
-    "D_Zone": str,
-    "Int_ID": str,
-    "Section_ID": str,
-    "Direction": str,
-    "Movement": str,
-    "Preceding": "Int64",
-    "Following": "Int64",
-    "Space_Headway": float,
-    "Time_Headway": "float",
-    " Location": str,
-}
+headers = get_header_type()
 
 headers_reduced = [
-    "Location",
-    "Vehicle_ID",
-    "Frame_ID",
-    "Global_Time",
-    "Local_X",
-    "Local_Y",
-    "Global_X",
-    "Global_Y",
-    "v_length",
-    "v_Width",
-    "v_Class",
-    "v_Vel",
-    "v_Acc",
-    "Lane_ID",
-    "Direction",
-    "Preceding",
-    "Following",
-    "Space_Headway",
+   x.value for x in HeaderReduced
 ]
 
 
