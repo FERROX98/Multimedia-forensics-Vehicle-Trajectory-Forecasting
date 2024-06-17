@@ -72,3 +72,57 @@ python train.py
 python evaluate.py
 ```
 
+
+## HighwayNet Model Architecture
+
+HighwayNet is a deep learning model designed for vehicle trajectory forecasting. It comprises two primary components: the **Generator** and the **Discriminator**. These components collaborate to predict future vehicle trajectories from historical data and to discern between real and generated trajectories.
+
+### Generator Architecture
+
+The Generator generates future vehicle trajectories based on historical and neighboring vehicle data inputs.
+
+- **Input Embedding Layers**: 
+  - **Target Embedding Layer**: Embeds historical trajectory data.
+  - **Neighbor Embedding Layer**: Embeds neighboring vehicle data.
+
+- **Leaky ReLU Activation**: Applies a non-linear activation function with a small negative slope.
+
+- **Encoder LSTMs**: 
+  - **Target Encoder LSTM**: Encodes historical trajectory data.
+  - **Neighbor Encoder LSTM**: Encodes neighboring vehicle data.
+
+- **Decoder LSTM**: Combines encoded states to predict future trajectories.
+
+- **Output Layer**: Linear layer mapping LSTM outputs to predicted trajectory points.
+
+#### Workflow
+
+1. **Input Processing**: Embeds historical and neighboring vehicle data.
+2. **Encoding**: LSTM encodes embedded data.
+3. **Decoding**: LSTM combines encoded states to predict trajectories.
+4. **Prediction**: LSTM outputs are refined using Gaussian bivariate distribution.
+
+### Discriminator Architecture
+
+The Discriminator distinguishes between real and generated trajectories using LSTM and MLP networks.
+
+- **Spatial Embedding**: Linear layer embedding 2D trajectory coordinates.
+
+- **Encoder LSTM**: Encodes trajectory data into hidden states.
+
+- **ReLU Activation**: Applies a non-linear ReLU activation function.
+
+- **Real Classifier**: 
+  - **Dropout Layer**: Randomly sets fraction of input units to zero during training.
+  - **Linear Layer**: Maps LSTM hidden state to a single dimension.
+  - **Sigmoid Activation**: Outputs probability (0 to 1) indicating trajectory authenticity.
+
+#### Workflow
+
+1. **Input Processing**: Embeds trajectory using spatial embedding.
+2. **Encoding**: LSTM encodes embedded trajectory data.
+3. **Classification**: MLP classifies trajectory authenticity using LSTM hidden states.
+
+### Summary
+
+TODO add some information about accuracy, F1 score, ecc and comparison with the orginal one 

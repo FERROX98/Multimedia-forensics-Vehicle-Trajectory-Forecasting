@@ -21,7 +21,8 @@ import time
 import math
 import datetime
 import logging
-
+device = "cuda" if torch.cuda.is_available() else "cpu"
+torch.device(device)
 FORMAT = "[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s"
 logging.basicConfig(level=logging.INFO, format=FORMAT, stream=sys.stdout)
 logger = logging.getLogger(__name__)

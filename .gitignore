@@ -48,3 +48,4 @@ Data/TrainSet_samples.csv
 Script/pre_processing/__pycache__/header_enum.cpython-310.pyc
 Model/SGAN/__pycache__/losses.cpython-310.pyc
 Model/SGAN/__pycache__/models.cpython-310.pyc
+Data/val_processed.pkl
