@@ -42,7 +42,7 @@ Vehicle trajectory forecasting is a critical component in autonomous driving sys
 
 ## Pre Processing
 
-In this project, we are using a CSV file associated with the NGSIM dataset. The NGSIM dataset contains pre-extracted data about agents (vehicles) on the road, which includes various attributes such as vehicle ID, frame ID, position coordinates, velocity, acceleration, and more. The primary objective of this project is not to extract information from raw data but to predict the future trajectories of target vehicles using the provided dataset.
+In this project, we are using a CSV file associated with the NGSIM dataset. The NGSIM dataset contains pre-extracted data about agents (vehicles) on the road, which includes various attributes such as vehicle ID, frame ID, position coordinates, velocity, acceleration, and more. The primary objective of this project is not to extract information from raw data but to predict the future trajectories of target vehicles using the provided dataset. The sequences consist of 3 seconds of history and 5 seconds of predicted trajectory data.
 
 The preprocessing steps are as follows:
 
@@ -56,8 +56,10 @@ The preprocessing steps are as follows:
 
 5. Filter Edge Cases: Trajectories with insufficient frames are filtered out to ensure the model has enough data to make accurate predictions.
 
-## Extraction From Video Sequence
-For completeness, we have also considered a model based on YOLO for extracting information from video sequences. YOLO is a state-of-the-art, real-time object detection system that can identify and locate multiple objects in video frames with high accuracy.
+6. A 3x3 grid with cells of 4 meters each is used to include the neighbors of each vehicle in the dataset. This grid helps capture the social context of vehicle movements:
+
+<!-- ## Extraction From Video Sequence
+For completeness, we have also considered a model based on YOLO for extracting information from video sequences. YOLO is a state-of-the-art, real-time object detection system that can identify and locate multiple objects in video frames with high accuracy. -->
 
 # Running Python Script for Training and Evaluation
 

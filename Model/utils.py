@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 import datetime
 import json
+import pickle
 import torch
 import sys
 
@@ -37,21 +38,37 @@ def load_dataset(t_h, t_f, batch_size=128):
     # valSet = ngsimDataset(
     #     "Data/sample.csv","Data/sample_tracks.csv"
     # )
+    samples = None
+    with open("Data/val_processed.pkl", "rb") as f:
+        samples = pickle.load(f)
+    
+    # fileter sample from nan value
+    samples = [sample for sample in samples if not torch.isnan(sample[0]).any() and not torch.isnan(sample[1]).any() and not torch.isnan(sample[2]).any()]
+    #70% of the data is used for training
+    samples = samples[:int(0.7 * len(samples))]
+    #10% of the data is used for validation
+    val_samples = samples[int(0.7 * len(samples)) : int(0.8 * len(samples))]
+    #20% of the data is used for testing
+    test_samples = samples[int(0.8 * len(samples)) :]
+    
     valSet = ngsimDataset(
         "Data/ValSet_samples.csv",
         "Data/ValSet_tracks.csv",
+        samples=val_samples
+        
     )
 
     trSet = ngsimDataset(
         "Data/TestSet_samples.csv",
         "Data/TestSet_tracks.csv",
+        samples=test_samples
     )
 
     trDataloader = DataLoader(
         trSet,
         batch_size=batch_size,
         # shuffle=True,
-        num_workers=1,
+        num_workers=4,
         collate_fn=trSet.collate_fn,
         pin_memory=True,
     )
@@ -59,7 +76,7 @@ def load_dataset(t_h, t_f, batch_size=128):
         valSet,
         batch_size=batch_size,
         # shuffle=True,
-        num_workers=2,
+        num_workers=4,
         collate_fn=valSet.collate_fn,
         pin_memory=True,
     )
@@ -131,9 +148,9 @@ def clean_train_values(folder):
 
 # Initialize network
 def init_model(args):
-    gen = highwayNetGenerator(args)
+    gen = highwayNetGenerator()
 
-    dis = highwayNetDiscriminator(args)
+    dis = highwayNetDiscriminator()
 
     gen = gen.cuda()
     dis = dis.cuda()
