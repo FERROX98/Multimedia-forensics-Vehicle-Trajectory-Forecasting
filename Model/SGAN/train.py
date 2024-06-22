@@ -1,11 +1,15 @@
 from __future__ import print_function
+import numpy as np
 import torch
+from torch.optim.lr_scheduler import StepLR
 from tqdm import tqdm
 from models import highwayNetDiscriminator, highwayNetGenerator
 import sys
+import geopy.distance
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 sys.path.insert(1, "Model")
+
 from utils import (
     clean_train_values,
     get_model_memory_usage,
@@ -13,7 +17,6 @@ from utils import (
     init_model,
     load_args,
     load_dataset,
-    maskedNLL,
     rmse,
 )
 from torch.utils.data import DataLoader
@@ -26,10 +29,8 @@ torch.device(device)
 FORMAT = "[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s"
 logging.basicConfig(level=logging.INFO, format=FORMAT, stream=sys.stdout)
 logger = logging.getLogger(__name__)
-from torch import nn
+from torch import nan, nn
 from tensorboardX import SummaryWriter
-
-writer = SummaryWriter("SperimentalValue")
 
 
 def train(
@@ -46,8 +47,10 @@ def train(
     g_loss_fn_2 = rmse
     d_loss_fn = nn.BCELoss()
 
-    opt_generator = torch.optim.Adam(generator.parameters(), lr=0.001)
-    opt_discriminator = torch.optim.Adam(discriminator.parameters(), lr=0.001)
+    opt_generator = torch.optim.Adam(generator.parameters(), lr=0.005)
+    opt_discriminator = torch.optim.Adam(discriminator.parameters(), lr=0.005)
+    scheduler_d = StepLR(opt_generator, step_size=3, gamma=0.1)
+    scheduler_g = StepLR(opt_discriminator, step_size=30, gamma=0.1)
     init_tr_tipe = datetime.datetime.now()
     for epoch_num in range(train_epochs):
 
@@ -55,14 +58,20 @@ def train(
         current_loss_d = 0
         n_loss_count_g = 0
         n_loss_count_d = 0
-        d_steps_left = 2
-        g_steps_left = 1
+        epoch_rmse_loss = 0
+        d_steps_left = 1
+        g_steps_left = 2
         flg_init = False
+        epoch_t1 = torch.zeros(1).cuda()
+        epoch_t2 = torch.zeros(1).cuda()
+        epoch_t3 = torch.zeros(1).cuda()
+        epoch_t4 = torch.zeros(1).cuda()
+        epoch_t5 = torch.zeros(1).cuda()
         st_time_load_dataset = datetime.datetime.now()
         for i, data in enumerate(tqdm(trDataloader)):
             st_time = datetime.datetime.now()
             if not flg_init:
-                print("Time to load dataset: ", st_time - st_time_load_dataset)
+               # print("Time to load dataset: ", st_time - st_time_load_dataset)
                 flg_init = True
             if d_steps_left > 0:
                 current_loss_d += discriminator_step(
@@ -73,11 +82,11 @@ def train(
                     opt_discriminator,
                     d_loss_fn,
                 ).item()
-                n_loss_count_g += 1
+                n_loss_count_d += 1
                 d_steps_left -= 1
 
             elif g_steps_left > 0:
-                current_loss_g += generator_step(
+                tmp_loss,t1,t2,t3,t4,t5 = generator_step(
                     epoch_num,
                     data,
                     generator,
@@ -85,25 +94,46 @@ def train(
                     opt_generator,
                     g_loss_fn,
                     g_loss_fn_2,
-                ).item()
-                n_loss_count_d += 1
+                  
+                )
+               # epoch_rmse_loss += rmse_loss.item()
+                current_loss_g += tmp_loss.item()
+                epoch_t1 += t1.item()
+                epoch_t2 += t2.item()
+                epoch_t3 += t3.item()
+                epoch_t4 += t4.item()
+                epoch_t5 += t5.item()
+                n_loss_count_g += 1
                 g_steps_left -= 1
 
             torch.cuda.synchronize()
-            print("Time 1: %s", datetime.datetime.now() - st_time)
+            #print("Time 1: %s", datetime.datetime.now() - st_time)
             # Skip the rest if we are not at the end of an iteration
             if d_steps_left > 0 or g_steps_left > 0:
                 continue
-            print("Time 2 : %s", datetime.datetime.now() - st_time)
+           # print("Time 2 : %s", datetime.datetime.now() - st_time)
             # reset steps
             d_steps_left = 1
-            g_steps_left = 1
+            g_steps_left = 2
 
         batch_time = datetime.datetime.now() - st_time
         epoch_loss_d = current_loss_d / n_loss_count_d
         epoch_loss_g = current_loss_g / n_loss_count_g
+        epoch_loss_rmse = epoch_rmse_loss / n_loss_count_g
+        epoch_t1 = epoch_t1 / n_loss_count_g
+        epoch_t2 = epoch_t2 / n_loss_count_g
+        epoch_t3 = epoch_t3 / n_loss_count_g
+        epoch_t4 = epoch_t4 / n_loss_count_g
+        epoch_t5 = epoch_t5 / n_loss_count_g
         writer.add_scalar("Data/loss_train_D", epoch_loss_d, epoch_num)
         writer.add_scalar("Data/loss_train_G", epoch_loss_g, epoch_num)
+       # writer.add_scalar("Data/loss_train_G_rmse", epoch_loss_rmse, epoch_num)
+        writer.add_scalar("Data/RMSE_t1", epoch_t1.item(), epoch_num)
+        writer.add_scalar("Data/RMSE_t2", epoch_t2.item(), epoch_num)
+        writer.add_scalar("Data/RMSE_t3", epoch_t3.item(), epoch_num)
+        writer.add_scalar("Data/RMSE_t4", epoch_t4.item(), epoch_num)
+        writer.add_scalar("Data/RMSE_t5", epoch_t5.item(), epoch_num)
+
         # TODO write the accuracy of discriminator
         print(
             "Epoch no:",
@@ -114,19 +144,26 @@ def train(
             format(epoch_loss_d, "0.4f"),
             "| Avg train loss_G:",
             format(epoch_loss_g, "0.4f"),
-            "| Epoch Time(s):",
-            batch_time,
+          #  "| Avg train loss_G_rmse:",
+          #  format(epoch_loss_rmse, "0.4f"),
+            "| loss t1 :", epoch_t1.item(),
+            "| loss t2 :", epoch_t2.item(),
+            "| loss t3 :", epoch_t3.item(),
+            "| loss t4 :", epoch_t4.item(),
+            "| loss t5 :", epoch_t5.item(),
+           # "| Epoch Time(s):",
+           # batch_time,
         )
         current_loss_d = 0
         current_loss_g = 0
-
         print("Calculating on validation set")
-        validate(valDataloader, generator, discriminator, writer, epoch_num)
-
+        #validate(valDataloader, generator, discriminator, writer, epoch_num)
+        scheduler_d.step()
+        scheduler_g.step()
     writer.flush()
     writer.close()
     
-    print("total training time: ", datetime.datetime.now() - init_tr_tipe)
+  #  print("total training time: ", datetime.datetime.now() - init_tr_tipe)
     torch.save(
         generator.state_dict(),
         "Model/Config/gen.tar",
@@ -156,6 +193,11 @@ def validate(
     
     loss_g = 0
     loss_d = 0
+    val_t1 = 0
+    val_t2 = 0
+    val_t3 = 0
+    val_t4 = 0
+    val_t5 = 0
     n_loss_count_d = 0
     n_loss_count_g = 0
     
@@ -168,21 +210,23 @@ def validate(
     with torch.no_grad():
         for i, data in enumerate(valDataloader):
             
-            if not flg_init:
-                print(
-                    "Time to load Val dataset: ",
-                    datetime.datetime.now() - st_time_load_dataset,
-                )
-                flg_init = True
+            # if not flg_init:
+            #     print(
+            #         "Time to load Val dataset: ",
+            #         datetime.datetime.now() - st_time_load_dataset,
+            #     )
+            #     flg_init = True
                 
-            history, nbrs, fut, _, _, _ = data
+            history, nbrs, fut, _, _, _, vel, acc_vehi  = data
             history = history.cuda()
             nbrs = nbrs.cuda()
             fut = fut.cuda()
+            vel = vel.cuda()
+            acc_vehi = acc_vehi.cuda()
 
             if d_steps_left > 0:
 
-                pred_traj_fake = generator(history, nbrs)
+                pred_traj_fake = generator(history, nbrs, vel, acc_vehi)
 
                 traj_real = torch.cat([history, fut], dim=0)
                 traj_fake = torch.cat([history, pred_traj_fake[:, :, :2]], dim=0)
@@ -208,9 +252,22 @@ def validate(
                 d_steps_left -= 1
 
             elif g_steps_left > 0:
-                traj_fake = generator(history, nbrs)
-                loss_g += g_loss_fn2(traj_fake[:, :, :2], fut).item()
-
+                traj_fake = generator(history, nbrs, vel, acc_vehi)
+                
+                t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut)
+                #loss_g += loss_g_rmse.item()
+                loss_g+= t1.item()
+                loss_g+= t2.item()
+                loss_g+= t3.item()
+                loss_g+= t4.item()
+                loss_g+= t5.item()
+                
+                val_t1 += t1.item()    
+                val_t2 += t2.item()
+                val_t3 += t3.item()
+                val_t4 += t4.item()
+                val_t5 += t5.item()
+                
                 traj_fake = torch.cat([history, traj_fake[:, :, :2]], dim=0)
 
                 scores_fake = discriminator(traj_fake)
@@ -225,6 +282,11 @@ def validate(
         acc = 100 * (acc / tot_traj)
         loss_d = loss_d / n_loss_count_d
         loss_g = loss_g / n_loss_count_g
+        val_t1 = val_t1 / n_loss_count_g
+        val_t2 = val_t2 / n_loss_count_g
+        val_t3 = val_t3 / n_loss_count_g
+        val_t4 = val_t4 / n_loss_count_g
+        val_t5 = val_t5 / n_loss_count_g
         
         print(
             "Accuracy_val_D: ",
@@ -238,6 +300,11 @@ def validate(
         writer.add_scalar("Data/accuracy_val_D", acc, epoch_num)
         writer.add_scalar("Data/loss_val_D", loss_d, epoch_num)
         writer.add_scalar("Data/loss_val_G", loss_g, epoch_num)
+        writer.add_scalar("Data/RMSE_val_t1", val_t1, epoch_num)
+        writer.add_scalar("Data/RMSE_val_t2", val_t2, epoch_num)
+        writer.add_scalar("Data/RMSE_val_t3", val_t3, epoch_num)
+        writer.add_scalar("Data/RMSE_val_t4", val_t4, epoch_num)
+        writer.add_scalar("Data/RMSE_val_t5", val_t5, epoch_num)
 
         generator.train()
         discriminator.train()
@@ -251,18 +318,22 @@ def discriminator_step(
     optimizer_d,
     d_loss_fn,
 ):
-    history, nbrs, fut, _, _, _ = data
+    history, nbrs, fut, _, _, _, vel, acc = data
+    if torch.isnan(history).any() or torch.isnan(nbrs).any() or torch.isnan(fut).any() or torch.isnan(vel).any() or torch.isnan(acc).any():
+        print("NAN")
 
     history = history.cuda()
     nbrs = nbrs.cuda()
     fut = fut.cuda()
+    vel = vel.cuda()
+    acc = acc.cuda()
 
     loss = torch.zeros(1).cuda()
 
-    pred_traj_fake = generator(history, nbrs)
+    pred_traj_fake = generator(history, nbrs, vel, acc)
 
     traj_real = torch.cat([history, fut], dim=0)
-    traj_fake = torch.cat([history, pred_traj_fake[:, :, :2]], dim=0)
+    traj_fake = torch.cat([history, pred_traj_fake[:, :, :]], dim=0)
 
     y_pred_fake = discriminator(traj_fake)
     y_pred_real = discriminator(traj_real)
@@ -272,6 +343,7 @@ def discriminator_step(
         or y_pred_fake.min(dim=0)[0] < 0
         or y_pred_real.max(dim=0)[0] > 1
         or y_pred_real.min(dim=0)[0] < 0
+        or y_pred_real.max(dim=0)[0] == nan
     ):
         print("y_pred_fake", y_pred_fake)
         print("y_pred_real", y_pred_real)
@@ -283,6 +355,7 @@ def discriminator_step(
 
     optimizer_d.zero_grad()
     loss.backward()
+   # nn.utils.clip_grad_norm_(discriminator.parameters(), 10)
     optimizer_d.step()
 
     return loss
@@ -300,18 +373,27 @@ def generator_step(
 
     loss = torch.zeros(1).cuda()
 
-    history, nbrs, fut, _, _, _ = data
-
+    history, nbrs, fut, _, _, _, vel, acc = data
+    if torch.isnan(history).any() or torch.isnan(nbrs).any() or torch.isnan(fut).any() or torch.isnan(vel).any() or torch.isnan(acc).any() or torch.isnan(history).any() or torch.isnan(nbrs).any() or torch.isnan(fut).any() or torch.isnan(vel).any() or torch.isnan(acc).any():
+        print("NAN")
     history = history.cuda()
     nbrs = nbrs.cuda()
     fut = fut.cuda()
+    vel = vel.cuda()
+    acc = acc.cuda()
 
-    traj_fake = generator(history, nbrs)
+    traj_fake = generator(history, nbrs, vel, acc)
 
     # TODO vedere se cambiare output a solo 2 dimensioni
-    loss += g_loss_fn2(traj_fake[:, :, :2], fut)
-
-    traj_fake = torch.cat([history, traj_fake[:, :, :2]], dim=0)
+    t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut)
+   
+    # loss +=  t1
+    # loss +=  t2
+    # loss +=  t3
+    # loss +=  t4
+    # loss +=  t5
+    loss+=tot
+    traj_fake = torch.cat([history, traj_fake[:, :, :]], dim=0)
 
     scores_fake = discriminator(traj_fake)
 
@@ -319,14 +401,21 @@ def generator_step(
 
     optimizer_g.zero_grad()
     loss.backward()
+   # nn.utils.clip_grad_norm_(generator.parameters(), 10)
     optimizer_g.step()
-
-    return loss
+    
+    return loss,t1,t2,t3,t4,t5
 
 
 if __name__ == "__main__":
 
     clean_train_values("SperimentalValue")
+    writer = SummaryWriter("SperimentalValue")
+    # writer.add_scalar('Loss/train', np.random.random(), 1)
+    # writer.add_scalar('Loss/test', np.random.random(), 1)
+    # writer.add_scalar('Accuracy/train', np.random.random(), 1)
+    # writer.add_scalar('Accuracy/test', np.random.random(), 1)
+   
     start_time = datetime.datetime.now()
 
     # Model Arguments
@@ -334,15 +423,15 @@ if __name__ == "__main__":
 
     # Initialize network
     gen, dis = init_model(args)
-    input_size = ((15, 24, 2), (15, 24, 9, 2))
-    mem_usg_g = get_model_memory_usage_gen(gen, (15, 24, 2), (15, 24, 9, 2))
+    input_size = ((15, 24, 2), (15, 24, 9, 2), ( 24, 1), ( 24, 1))
+    mem_usg_g = get_model_memory_usage_gen(gen, (15, 64, 2), (15, 64, 9, 2), ( 64, 1), ( 64, 1))
     # mem_usg_d= get_model_memory_usage(dis,input_size)
     print("Memory usage of generator: ", mem_usg_g)
     # print("Memory usage of discriminator: ", mem_usg_d)
     
     # Load dataset
     trDataloader, valDataloader = load_dataset(
-        30, 50
+        30, 48, 128
     )  # historical step 3s prediction 5s
 
     # Train

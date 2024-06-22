@@ -40,8 +40,11 @@ class ngsimDataset(Dataset):
         load_from_csv=False,
         samples=[]
     ):
-
+        self.samples_csv = pd.read_csv(
+                samples_path, engine="c", dtype=headers, na_values=["-1"]
+            ).to_numpy()
         print(samples_path, tracks_path)
+        
         if load_from_csv:
             self.samples = pd.read_csv(
                 samples_path, engine="c", dtype=headers, na_values=["-1"]
@@ -245,8 +248,17 @@ class ngsimDataset(Dataset):
             return len(self.samples)
 
     def __getitem__(self, idx):
+        #hist, neighbors, fut, t, locId, vehId))
         if len(self.processed_samples)>0:
-            return self.processed_samples[idx]
+            all_field = self.samples_csv[((self.samples_csv[:, DatasetFields.LOCATION.value] == self.processed_samples[idx][4]) &
+                                        (self.samples_csv[:, DatasetFields.VEHICLE_ID.value] == self.processed_samples[idx][5]) &
+                                        (self.samples_csv[:, DatasetFields.FRAME_ID.value] == self.processed_samples[idx][3])), :]
+            if (len(all_field) == 0):
+                return (*self.processed_samples[idx], torch.tensor(10), torch.tensor(0.5))
+            vel = all_field[0, DatasetFields.V_VEL.value] if all_field[0, DatasetFields.V_VEL.value] == all_field[0, DatasetFields.V_VEL.value] else np.asarray(10)
+            acc = all_field[0, DatasetFields.V_ACC.value] if all_field[0, DatasetFields.V_ACC.value] == all_field[0, DatasetFields.V_ACC.value]  else np.asarray(0.5)
+           # direction = all_field[0, DatasetFields.DIRECTION.value]
+            return (*self.processed_samples[idx], vel, acc)
         
         st_time_init = datetime.datetime.now()
         locId = self.samples[idx, DatasetFields.LOCATION.value]
@@ -312,14 +324,21 @@ class ngsimDataset(Dataset):
             30 // self.d_s, len(samples), self.grid_size[0] * self.grid_size[1], 2
         )
         veh_ID_batch = torch.zeros(len(samples), 1)
+        vel_batch = torch.zeros(len(samples), 1)
+        acc_batch = torch.zeros(len(samples), 1)
+       # direction_batch = torch.zeros(len(samples), 1)
         time_batch = torch.zeros(len(samples), 1)
         dsID_batch = []
         hist_batch = torch.zeros(30 // self.d_s, len(samples), 2)
         fut_batch = torch.zeros(50 // self.d_s, len(samples), 2)
 
-        for sampleId, (hist, neighbors, fut, t, locId, vehId) in enumerate(samples):
+        for sampleId, (hist, neighbors, fut, t, locId, vehId, vel, acc ) in enumerate(samples):
 
             veh_ID_batch[sampleId, :] = torch.tensor(vehId).type(torch.int64)
+            vel_batch[sampleId, :] = torch.tensor(vel).type(torch.float)
+            acc_batch[sampleId, :] = torch.tensor(acc).type(torch.float)
+          #  direction_batch[sampleId, :] = torch.tensor(direction).type(torch.int64)
+            
             time_batch[sampleId, :] = torch.tensor(t).type(torch.int64)
             dsID_batch.append(locId)
 
@@ -336,6 +355,8 @@ class ngsimDataset(Dataset):
             time_batch,
             dsID_batch,
             veh_ID_batch,
+            vel_batch,
+            acc_batch,
         )
 
 
@@ -346,7 +367,7 @@ if __name__ == "__main__":
     with open("Data/val_processed.pkl", "rb") as f:
         samples = pickle.load(f)
     
-    tr_set = ngsimDataset("Data/ValSet_samples.csv", "Data/ValSet_tracks.csv",samples=samples)
+    tr_set = ngsimDataset("Data/ValSet_tracks.csv", "Data/ValSet_tracks.csv",samples=samples)
     
     # tr_set= ngsimDataset(
     #     "Data/TrainSet_samples.csv","Data/TrainSet_tracks.csv"
@@ -362,7 +383,7 @@ if __name__ == "__main__":
         tr_set,
         batch_size=48,
         # shuffle=True,
-        num_workers=6,
+        num_workers=0,
         collate_fn=tr_set.collate_fn,
         pin_memory=True,
     )
