@@ -385,7 +385,7 @@ if __name__ == "__main__":
     clean_train_values("SperimentalValue")
     writer = SummaryWriter("SperimentalValue")
    
-    batch_size = 48
+    batch_size = 24
     
     # Model Arguments
     args = load_args()
@@ -397,14 +397,14 @@ if __name__ == "__main__":
     print("Memory usage of generator: ", mem_usg_g)
  
     # Load dataset
-    trDataloader, valDataloader = load_dataset(
-        30, 256, batch_size
+    trDataloader, valDataloader, _ = load_dataset(
+        30, 50, batch_size
     )  # historical step 3s prediction 5s
     
     start_time = datetime.datetime.now()
     
     # Train
-    train(trDataloader, valDataloader, 10, gen, dis)
+    train(trDataloader, valDataloader, 5, gen, dis)
     
     end_time = datetime.datetime.now()
     

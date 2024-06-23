@@ -127,4 +127,10 @@ The Discriminator distinguishes between real and generated trajectories using LS
 
 ### Summary
 
-TODO add some information about accuracy, F1 score, ecc and comparison with the orginal one 
+- **Generator:**
+    - Encodes historical trajectories, velocity, acceleration, and neighbor information using LSTM and MLP layers.
+Decodes this information to predict future trajectories.
+- **Discriminator:**
+  - Encodes trajectories using LSTM and MLP layers.
+    Classifies the encoded trajectories as real or fake.
+    This architecture enables the model to effectively forecast vehicle trajectories by learning from both the historical data and the interactions with neighboring vehicles.

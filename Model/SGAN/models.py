@@ -85,7 +85,7 @@ class highwayNetGenerator(nn.Module):
         out_emb_vel_acc=32,
         
         in_grid_nbrs_size=2,
-        out_grid_nbrs_size=32,
+        out_grid_nbrs_size=8,
         
         out_size_encoder_hist=64,
         out_size_emb_target=256,
@@ -93,7 +93,7 @@ class highwayNetGenerator(nn.Module):
         out_middle_emb_nbrs_enc=4,
         out_nbrs_encoder_size=128,
         
-        out_size_pre_dec = 64,
+        out_size_pre_dec=64,
         out_size_dec=256,
         
         output_size=2,
@@ -113,7 +113,7 @@ class highwayNetGenerator(nn.Module):
         self.out_size_hist = out_size_hist
 
         # combine acc + vel + history encoder
-        self.layers_target_encoder = 1
+        self.layers_target_encoder = 4
         self.in_size_encoder_hist = out_size_hist
         self.out_size_encoder_hist = out_size_encoder_hist
 
@@ -126,7 +126,7 @@ class highwayNetGenerator(nn.Module):
         self.out_grid_nbrs_size = out_grid_nbrs_size
 
         # encode nbrs
-        self.layers_nbrs_encoder = 1
+        self.layers_nbrs_encoder = 4
         self.in_nbrs_encoder_size = out_grid_nbrs_size
         self.out_nbrs_encoder_size = out_nbrs_encoder_size
 

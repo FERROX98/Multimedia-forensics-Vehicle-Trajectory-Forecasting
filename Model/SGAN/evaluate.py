@@ -1,185 +1,197 @@
 from __future__ import print_function
 import torch
-from OLD.model import highwayNet
-from utils import ngsimDataset,maskedMSETest, maskedMAETest
+import sys
+sys.path.insert(1, "Model")
+
+from utils import (
+    clean_train_values,
+    load_args,
+    load_dataset,
+    load_model,
+    ngsimDataset,
+    rmse,
+)
 from torch.utils.data import DataLoader
 import time
 import pandas as pd
 import numpy as np
 
+from tensorboardX import SummaryWriter
 
 
-## Network Arguments
-args = {}
-args['use_cuda'] = True
-args['encoder_size'] = 64
-args['decoder_size'] = 128#64
-args['in_length'] = 16
-args['out_length'] = 20
-args['grid_size'] = (265,3)
+def test():
+    gen.eval()
+    dis.eval()
 
-args['input_embedding_size'] = 32
-
-args['train_flag'] = False
-args['dropout'] = 0
-batch_size = 128
-
-# Evaluation metric:
-#metric = 'nll'  #or rmse
-metric = 'rmse'
-cav = 0.4 # set as -1, when no cavs at all
-t_h = 30 # 30 or 60
-r = 3
-# Initialize network
-net = highwayNet(args)
-net.load_state_dict(torch.load('trained_models/lstm_horizon_40_att_cav_'+str(cav)+'.tar')) 
-#net.load_state_dict(torch.load('trained_models/front_529_lstm_horizon_40_att_cav_'+str(cav)+'_Hsteps_'+str(t_h)+'_whole_round'+str(r+1)+'.tar')) #
-if args['use_cuda']:
-    net = net.cuda()
-
-tsSet = ngsimDataset('../../data/trajectory/TestSet_us101.mat', t_h=t_h, enc_size =64, CAV_ratio=cav)
-tsDataloader = DataLoader(tsSet,batch_size=batch_size,shuffle=True,num_workers=8,collate_fn=tsSet.collate_fn) # 
-
-lossVals = torch.zeros(25).cuda()
-counts = torch.zeros(25).cuda()
-
-lossVal = 0 # revised by Lei
-count = 0
-
-mae = 0
-count_mae = 0
-
-vehid = []
-target_ID = []
-target_Loc = []
-pred_x = []
-pred_y = []
-T = []
-dsID = []
-#ts_cen = []
-#ts_nbr = []
-wt_a = []
-#nbr_location = []
-#print (len(tsDataloader.dataset) / 256)
-
-num_test = 0
-
-for i, data in enumerate(tsDataloader):
-    #print (i)
-    
-
-    st_time = time.time()
-    flag, hist, nbrs, mask, lat_enc, lon_enc, fut, op_mask, veh_id, t, ds, targetID, targetLoc = data
-    if flag == 0: # this happens when no target HDV in front
-        continue
-    num_test += hist.size()[1]
-    #print (hist[:,33,:])
-    vehid.append(veh_id) # CAV ID
-    target_ID.append(targetID) # target HDV ID
-    target_Loc.append(targetLoc) # target HDV location
-    #print (veh_id.size())
-    T.append(t) # current time
-    dsID.append(ds)
-    
-    #print (i)
-    # Initialize Variables
-    if args['use_cuda']:
-        hist = hist.cuda()
-        nbrs = nbrs.cuda()
-        mask = mask.cuda()
-        lat_enc = lat_enc.cuda()
-        lon_enc = lon_enc.cuda()
-        fut = fut.cuda()
-        op_mask = op_mask.cuda()
+    g_loss_fn = nn.BCELoss()
+    g_loss_fn2 = rmse
+    d_loss_fn = nn.BCELoss()
 
 
+    vehid = []
+    target_ID = []
+    target_Loc = []
+    pred_x = []
+    pred_y = []
+    T = []
 
-    fut_pred,  weight_a = net(hist, nbrs, mask, lat_enc, lon_enc)
+    d_steps_left = 1
+    g_steps_left = 1
 
-    #print (fut_pred.shape)
-    #print (fut_pred[:, 33, 0])
-    #print (fut_pred[:,33, 1])
+    loss_g = 0
+    loss_d = 0
 
-    #print (fut[:, 33, 0])
-    #print (fut[:, 33, 1])
+    val_t1 = 0
+    val_t2 = 0
+    val_t3 = 0
+    val_t4 = 0
+    val_t5 = 0
 
-    l, c = maskedMSETest(fut_pred, fut, op_mask)
-    mae_l, mae_c = maskedMAETest(fut_pred, fut, op_mask)
+    n_loss_count_d = 0
+    n_loss_count_g = 0
 
-    #print (out[:, 0])
-    #out = out.detach().cpu().numpy()
-    #print (type(out))
-    #out = pd.DataFrame(out)
-    #out.to_csv('out2.csv')
-    
-    fut_pred_x = fut_pred[:,:,0].detach()
-    fut_pred_x = fut_pred_x.cpu().numpy()
-    #print (type(fut_pred_x)) # (25, 128)
-    fut_pred_y = fut_pred[:,:,1].detach()
-    fut_pred_y = fut_pred_y.cpu().numpy()
-    pred_x.append(fut_pred_x)
-    pred_y.append(fut_pred_y)
+    acc = 0.0
+    tot_traj = 0
+    num_test = 0
+    with torch.no_grad():
+        for i, data in enumerate(tsDataloader):
 
-    #print (weight_ha.size())
-    #ts_cen.append(weight_ts_center[:, :, 0].detach().cpu().numpy())
-    #ts_nbr.append(weight_ts_nbr[:, :, 0].detach().cpu().numpy())
-    wt_a.append(weight_a[:, :, 0].detach().cpu().numpy())
-    #print (nbr_loc)
-    #nbr_location.append(np.array(nbr_loc))
-    
-    #print (len(pred))
-    lossVal +=l.detach() # revised by Lei
-    count += c.detach()
+            history, nbrs, fut,  t, locId, vehId, vel, acc_vehi = data
 
-    mae += mae_l.detach()
-    count_mae += mae_c.detach()
-    
-    #print (lossVal)
-    #print (count)
+            vehid.append(vehId) 
+            target_Loc.append(locId) 
+            T.append(t)
+            num_test += history.size()[1]
+            history = history.cuda()
+            nbrs = nbrs.cuda()
+            fut = fut.cuda()
+            vel = vel.cuda()
+            acc_vehi = acc_vehi.cuda()
 
-    #break
+            if d_steps_left > 0:
 
-vehid = sum(vehid, [])
-vehid = pd.DataFrame(vehid)
+                pred_traj_fake = gen(history, nbrs, vel, acc_vehi)
 
-target_ID = sum(target_ID, [])
-target_ID = pd.DataFrame(target_ID)
+                traj_real = torch.cat([history, fut], dim=0)
+                traj_fake = torch.cat([history, pred_traj_fake[:, :, :2]], dim=0)
 
-target_Loc = sum(target_Loc, [])
-target_Loc = pd.DataFrame(target_Loc)
+                y_pred_fake = dis(traj_fake)
+                y_pred_real = dis(traj_real)
 
-T = sum(T, [])
-T = pd.DataFrame(T)
+                loss_fake = d_loss_fn(y_pred_fake, torch.zeros_like(y_pred_fake))
+                loss_real = d_loss_fn(y_pred_real, torch.ones_like(y_pred_real))
 
-dsID = sum(dsID, [])
-dsID = pd.DataFrame(dsID)
+                tot_traj += y_pred_fake.shape[0] + y_pred_real.shape[0]
+                acc += (
+                    1.0
+                    * (y_pred_fake.round() == torch.zeros_like(y_pred_fake))
+                    .sum()
+                    .item()
+                    + (y_pred_real.round() == torch.ones_like(y_pred_real)).sum().item()
+                )
 
-pred_x = np.concatenate( pred_x, axis=1 )
-pred_x = pd.DataFrame(pred_x)
+                loss_d += loss_fake.item()
+                loss_d += loss_real.item()
 
-pred_y = np.concatenate( pred_y, axis=1 )
-pred_y = pd.DataFrame(pred_y)
+                n_loss_count_d += 1
+                d_steps_left -= 1
 
-#print (ts_cen)
-#ts_cen = np.concatenate( ts_cen, axis=0)
-#ts_cen = pd.DataFrame(ts_cen)
+            elif g_steps_left > 0:
+                traj_fake = gen(history, nbrs, vel, acc_vehi)
 
-#ts_nbr = np.concatenate( ts_nbr, axis=0)
-#ts_nbr = pd.DataFrame(ts_nbr)
+                t1, t2, t3, t4, t5, tot = g_loss_fn2(traj_fake[:, :, :], fut)
 
-wt_a = np.concatenate(wt_a, axis=0)
-wt_a = pd.DataFrame(wt_a)
+                loss_g += tot.item()
+
+                val_t1 += t1.item()
+                val_t2 += t2.item()
+                val_t3 += t3.item()
+                val_t4 += t4.item()
+                val_t5 += t5.item()
+
+                traj_fake = torch.cat([history, traj_fake[:, :, :2]], dim=0)
+
+                scores_fake = dis(traj_fake)
+
+                #loss_g += g_loss_fn(scores_fake, torch.ones_like(scores_fake)).item()
+                n_loss_count_g += 1
+                
+                g_steps_left -= 1
+                    
+                fut_pred_x = traj_fake[:,:,0].detach()
+                fut_pred_x = fut_pred_x.cpu().numpy()
+                #print (type(fut_pred_x)) # (25, 128)
+                fut_pred_y = traj_fake[:,:,1].detach()
+                fut_pred_y = fut_pred_y.cpu().numpy()
+                pred_x.append(fut_pred_x)
+                pred_y.append(fut_pred_y)
+
+            if d_steps_left > 0 or g_steps_left > 0:
+                continue
+            
+            d_steps_left = 1
+            g_steps_left = 1
+
+    acc = 100 * (acc / tot_traj)
+
+    loss_d = loss_d / n_loss_count_d
+    loss_g = loss_g / n_loss_count_g
+
+    val_t1 = val_t1 / n_loss_count_g
+    val_t2 = val_t2 / n_loss_count_g
+    val_t3 = val_t3 / n_loss_count_g
+    val_t4 = val_t4 / n_loss_count_g
+    val_t5 = val_t5 / n_loss_count_g
+
+    print(
+        "Accuracy_val_D: ",
+        format(acc, "0.4f"),
+        "| Avg val loss_D:",
+        format(loss_d, "0.4f"),
+        "| Avg val loss_G:",
+        format(loss_g, "0.4f"),
+    )
+
+    writer.add_scalar("Data/accuracy_val_D", acc)
+    writer.add_scalar("Data/loss_val_D", loss_d)
+    writer.add_scalar("Data/loss_val_G", loss_g)
+
+    writer.add_scalar("Data/RMSE_val_t1", val_t1)
+    writer.add_scalar("Data/RMSE_val_t2", val_t2)
+    writer.add_scalar("Data/RMSE_val_t3", val_t3)
+    writer.add_scalar("Data/RMSE_val_t4", val_t4)
+    writer.add_scalar("Data/RMSE_val_t5", val_t5)
+
+    target_ID = sum(target_ID, [])
+    target_ID = pd.DataFrame(target_ID)
+
+    target_Loc = sum(target_Loc, [])
+    target_Loc = pd.DataFrame(target_Loc)
+
+    T = sum(T, [])
+    T = pd.DataFrame(T)
+
+    pred_x = np.concatenate(pred_x, axis=1)
+    pred_x = pd.DataFrame(pred_x)
+
+    pred_y = np.concatenate(pred_y, axis=1)
+    pred_y = pd.DataFrame(pred_y)
+
+    print("lossVal is:", loss_g)
+    print("total test sample number:", num_test)
 
 
+    print(
+        "RMSE for each step is:", torch.pow(loss_g / n_loss_count_g, 0.5) * 0.3048
+    )  # Calculate RMSE and convert from feet to meters
 
-print ('lossVal is:', lossVal)
-print('total test sample number:', num_test)
+   # print("MAE for each step is:", mae / count_mae)
+    print("Overall RMSE is:", torch.pow(sum(loss_g) / sum(n_loss_count_g), 0.5) * 0.3048)
+  #  print("Overall MAE is:", sum(mae) / sum(count_mae))
 
-if metric == 'nll':
-    print(lossVal / count)
-else:
-    print('RMSE for each step is:', torch.pow(lossVal / count,0.5)*0.3048)   # Calculate RMSE and convert from feet to meters
-    
-    print ('MAE for each step is:', mae / count_mae)
-    print ('Overall RMSE is:', torch.pow(sum(lossVal) / sum(count), 0.5)*0.3048)
-    print ('Overall MAE is:', sum(mae) / sum(count_mae))
+
+if __name__ == "__main__":
+    gen, dis = load_model()
+    clean_train_values("SperimentalValue/TestValue")
+    writer = SummaryWriter("SperimentalValue/TestValue")
+    _, _, tsDataloader = load_dataset(batch_size=128)

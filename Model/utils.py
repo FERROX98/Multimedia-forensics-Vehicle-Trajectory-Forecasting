@@ -60,16 +60,16 @@ def rmse(predicted_values, true_values):
     tot_t4_loss = (lat_t4+lon_t4)
     tot_t5_loss = (lat_t5+lon_t5)
     tot= torch.sqrt(torch.mean(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss))
-    tot_t1 = torch.sqrt(torch.mean((lat_t1+lon_t1)))
-    tot_t2 = torch.sqrt(torch.mean((lat_t2+lon_t2)))
-    tot_t3 = torch.sqrt(torch.mean((lat_t3+lon_t3)))
-    tot_t4 = torch.sqrt(torch.mean((lat_t4+lon_t4)))
-    tot_t5 = torch.sqrt(torch.mean((lat_t5+lon_t5)))
-    # tot_t1 = torch.sqrt((lat_t1+lon_t1)**2)
-    # tot_t2 = torch.sqrt((lat_t2+lon_t2)**2)
-    # tot_t3 = torch.sqrt((lat_t3+lon_t3)**2)
-    # tot_t4 = torch.sqrt((lat_t4+lon_t4)**2)
-    # tot_t5 = torch.sqrt((lat_t5+lon_t5)**2)
+    # tot_t1 = torch.sqrt(torch.mean((lat_t1+lon_t1)))
+    # tot_t2 = torch.sqrt(torch.mean((lat_t2+lon_t2)))
+    # tot_t3 = torch.sqrt(torch.mean((lat_t3+lon_t3)))
+    # tot_t4 = torch.sqrt(torch.mean((lat_t4+lon_t4)))
+    # tot_t5 = torch.sqrt(torch.mean((lat_t5+lon_t5)))
+    tot_t1 = torch.sqrt((lat_t1+lon_t1)**2)
+    tot_t2 = torch.sqrt((lat_t2+lon_t2)**2)
+    tot_t3 = torch.sqrt((lat_t3+lon_t3)**2)
+    tot_t4 = torch.sqrt((lat_t4+lon_t4)**2)
+    tot_t5 = torch.sqrt((lat_t5+lon_t5)**2)
     #tot_rmse_in_meters = geopy.distance.geodesic(coords_1, coords_2).km
     # Total RMSE
     return tot_t1, tot_t2, tot_t3, tot_t4, tot_t5, tot
@@ -133,6 +133,12 @@ def load_dataset(t_h, t_f, batch_size=128):
         "Data/ValSet_tracks.csv",
         samples=train_samples
     )
+    
+    tsSet = ngsimDataset(
+        "Data/ValSet_samples.csv",
+        "Data/ValSet_tracks.csv",
+        samples=test_samples
+    )
 
     valDataloader = DataLoader(
         valSet,
@@ -150,8 +156,17 @@ def load_dataset(t_h, t_f, batch_size=128):
         collate_fn=trSet.collate_fn,
         pin_memory=True,
     )
+    tsDataloader = DataLoader(
+        tsSet,
+        batch_size=batch_size,
+        # shuffle=True,
+        num_workers=4,
+        collate_fn=tsSet.collate_fn,
+        pin_memory=True,
+    )
 
-    return trDataloader, valDataloader
+
+    return trDataloader, valDataloader, tsDataloader
 
 
 def clean_train_values(folder):
@@ -171,6 +186,18 @@ def init_model(args):
     gen = highwayNetGenerator()
 
     dis = highwayNetDiscriminator()
+
+    gen = gen.cuda()
+    dis = dis.cuda()
+    return gen, dis
+
+# Initialize network
+def load_model():
+    gen = highwayNetGenerator()
+    dis = highwayNetDiscriminator()
+    
+    gen.load_state_dict(torch.load("Model/Config/gen.tar"))
+    dis.load_state_dict(torch.load("Model/Config/dis.tar"))
 
     gen = gen.cuda()
     dis = dis.cuda()
