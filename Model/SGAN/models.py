@@ -88,7 +88,7 @@ class highwayNetGenerator(nn.Module):
         out_grid_nbrs_size=8,
         
         out_size_encoder_hist=64,
-        out_size_emb_target=256,
+        out_size_emb_target=1024,
         
         out_middle_emb_nbrs_enc=4,
         out_nbrs_encoder_size=128,

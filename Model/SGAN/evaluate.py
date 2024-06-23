@@ -16,6 +16,8 @@ import time
 import pandas as pd
 import numpy as np
 
+from torch import nn
+
 from tensorboardX import SummaryWriter
 
 
@@ -73,7 +75,7 @@ def test():
                 pred_traj_fake = gen(history, nbrs, vel, acc_vehi)
 
                 traj_real = torch.cat([history, fut], dim=0)
-                traj_fake = torch.cat([history, pred_traj_fake[:, :, :2]], dim=0)
+                traj_fake = torch.cat([history, pred_traj_fake[:, :, :]], dim=0)
 
                 y_pred_fake = dis(traj_fake)
                 y_pred_real = dis(traj_real)
@@ -109,7 +111,7 @@ def test():
                 val_t4 += t4.item()
                 val_t5 += t5.item()
 
-                traj_fake = torch.cat([history, traj_fake[:, :, :2]], dim=0)
+                traj_fake = torch.cat([history, traj_fake[:, :, :]], dim=0)
 
                 scores_fake = dis(traj_fake)
 
@@ -152,46 +154,51 @@ def test():
         format(loss_g, "0.4f"),
     )
 
-    writer.add_scalar("Data/accuracy_val_D", acc)
-    writer.add_scalar("Data/loss_val_D", loss_d)
-    writer.add_scalar("Data/loss_val_G", loss_g)
+    writer.add_scalar("accuracy_val_D", acc)
+    writer.add_scalar("loss_val_D", loss_d)
+    writer.add_scalar("loss_val_G", loss_g)
 
-    writer.add_scalar("Data/RMSE_val_t1", val_t1)
-    writer.add_scalar("Data/RMSE_val_t2", val_t2)
-    writer.add_scalar("Data/RMSE_val_t3", val_t3)
-    writer.add_scalar("Data/RMSE_val_t4", val_t4)
-    writer.add_scalar("Data/RMSE_val_t5", val_t5)
+    writer.add_scalar("RMSE_val_t1", val_t1)
+    writer.add_scalar("RMSE_val_t2", val_t2)
+    writer.add_scalar("RMSE_val_t3", val_t3)
+    writer.add_scalar("RMSE_val_t4", val_t4)
+    writer.add_scalar("RMSE_val_t5", val_t5)
 
-    target_ID = sum(target_ID, [])
-    target_ID = pd.DataFrame(target_ID)
+    # target_ID = sum(target_ID, [])
+    # target_ID = pd.DataFrame(target_ID)
 
-    target_Loc = sum(target_Loc, [])
-    target_Loc = pd.DataFrame(target_Loc)
+    # target_Loc = sum(target_Loc, [])
+    # target_Loc = pd.DataFrame(target_Loc)
 
-    T = sum(T, [])
-    T = pd.DataFrame(T)
+    # T = sum(T, [])
+    # T = pd.DataFrame(T)
 
-    pred_x = np.concatenate(pred_x, axis=1)
-    pred_x = pd.DataFrame(pred_x)
+    # pred_x = np.concatenate(pred_x, axis=1)
+    # pred_x = pd.DataFrame(pred_x)
+    
+    # writer.add_scalars("pred_x", pred_x, 0)
 
-    pred_y = np.concatenate(pred_y, axis=1)
-    pred_y = pd.DataFrame(pred_y)
+    # pred_y = np.concatenate(pred_y, axis=1)
+    # pred_y = pd.DataFrame(pred_y)
+    
+    # writer.add_scalars("pred_y", pred_y, 0)
 
     print("lossVal is:", loss_g)
     print("total test sample number:", num_test)
 
 
     print(
-        "RMSE for each step is:", torch.pow(loss_g / n_loss_count_g, 0.5) * 0.3048
+        "RMSE for each step is:", loss_g**0.5 
     )  # Calculate RMSE and convert from feet to meters
 
    # print("MAE for each step is:", mae / count_mae)
-    print("Overall RMSE is:", torch.pow(sum(loss_g) / sum(n_loss_count_g), 0.5) * 0.3048)
+    #print("Overall RMSE is:", torch.pow(sum(loss_g) / sum(n_loss_count_g), 0.5) * 0.3048)
   #  print("Overall MAE is:", sum(mae) / sum(count_mae))
 
 
 if __name__ == "__main__":
     gen, dis = load_model()
-    clean_train_values("SperimentalValue/TestValue")
-    writer = SummaryWriter("SperimentalValue/TestValue")
-    _, _, tsDataloader = load_dataset(batch_size=128)
+    clean_train_values("SperimentalValue/Test")
+    writer = SummaryWriter("SperimentalValue/Test")
+    _, _, tsDataloader = load_dataset(30,50,batch_size=128)
+    test()

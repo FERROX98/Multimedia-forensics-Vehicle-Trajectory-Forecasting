@@ -48,7 +48,7 @@ def train(
     g_loss_fn_2 = rmse
     d_loss_fn = nn.BCELoss()
 
-    opt_generator = torch.optim.Adam(generator.parameters(), lr=0.005)
+    opt_generator = torch.optim.Adam(generator.parameters(), lr=0.001)
     opt_discriminator = torch.optim.Adam(discriminator.parameters(), lr=0.005)
     
     scheduler_d = StepLR(opt_generator, step_size=3, gamma=0.1)
@@ -268,6 +268,9 @@ def validate(
 
             if d_steps_left > 0 or g_steps_left > 0:
                 continue
+            
+            d_steps_left = 1
+            g_steps_left = 2
 
         acc = 100 * (acc / tot_traj)
         
@@ -382,10 +385,10 @@ def generator_step(
 
 if __name__ == "__main__":
 
-    clean_train_values("SperimentalValue")
-    writer = SummaryWriter("SperimentalValue")
+    clean_train_values("SperimentalValue/Train")
+    writer = SummaryWriter("SperimentalValue/Test")
    
-    batch_size = 24
+    batch_size = 48
     
     # Model Arguments
     args = load_args()

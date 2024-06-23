@@ -60,16 +60,18 @@ def rmse(predicted_values, true_values):
     tot_t4_loss = (lat_t4+lon_t4)
     tot_t5_loss = (lat_t5+lon_t5)
     tot= torch.sqrt(torch.mean(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss))
+    tot= torch.mean(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss)
+
     # tot_t1 = torch.sqrt(torch.mean((lat_t1+lon_t1)))
     # tot_t2 = torch.sqrt(torch.mean((lat_t2+lon_t2)))
     # tot_t3 = torch.sqrt(torch.mean((lat_t3+lon_t3)))
     # tot_t4 = torch.sqrt(torch.mean((lat_t4+lon_t4)))
     # tot_t5 = torch.sqrt(torch.mean((lat_t5+lon_t5)))
-    tot_t1 = torch.sqrt((lat_t1+lon_t1)**2)
-    tot_t2 = torch.sqrt((lat_t2+lon_t2)**2)
-    tot_t3 = torch.sqrt((lat_t3+lon_t3)**2)
-    tot_t4 = torch.sqrt((lat_t4+lon_t4)**2)
-    tot_t5 = torch.sqrt((lat_t5+lon_t5)**2)
+    tot_t1 = torch.sqrt(torch.mean((lat_t1+lon_t1)))
+    tot_t2 = torch.sqrt(torch.mean((lat_t2+lon_t2)))
+    tot_t3 = torch.sqrt(torch.mean((lat_t3+lon_t3)))
+    tot_t4 = torch.sqrt(torch.mean((lat_t4+lon_t4)))
+    tot_t5 = torch.sqrt(torch.mean((lat_t5+lon_t5)))
     #tot_rmse_in_meters = geopy.distance.geodesic(coords_1, coords_2).km
     # Total RMSE
     return tot_t1, tot_t2, tot_t3, tot_t4, tot_t5, tot
