@@ -128,8 +128,7 @@ The Discriminator distinguishes between real and generated trajectories using LS
 ### Summary
 
 - **Generator:**
-    - Encodes historical trajectories, velocity, acceleration, and neighbor information using LSTM and MLP layers.
-Decodes this information to predict future trajectories.
+    - Encodes historical trajectories, velocity, acceleration, and neighbor information using LSTM and MLP layers.Decodes this information to predict future trajectories.
 - **Discriminator:**
   - Encodes trajectories using LSTM and MLP layers.
     Classifies the encoded trajectories as real or fake.
