@@ -80,7 +80,7 @@ class ngsimDataset(Dataset):
             ]
 
             for idx in tqdm(range(len(samples))):
-                t1 = datetime.datetime.now()
+
                 locId = samples[idx, DatasetFields.LOCATION.value]
                 vehId = samples[idx, DatasetFields.VEHICLE_ID.value]
                 t = samples[idx, DatasetFields.FRAME_ID.value]
@@ -103,7 +103,6 @@ class ngsimDataset(Dataset):
                 ).type(torch.float)
         
                 
-                t3 = datetime.datetime.now()
                 fut = torch.from_numpy(
                     self.getFuture(locId, vehId, t, all_tracks_filter_by_target).astype(
                         np.float32
@@ -115,7 +114,7 @@ class ngsimDataset(Dataset):
                 # 4 meters in feet
                 width_cell = 4 * 3.28084
                 height_cell = 4 * 3.28084
-                t4 = datetime.datetime.now()
+
                 neighbors = torch.from_numpy(
                     np.asarray(
                         self.get_neighbors(
@@ -260,7 +259,6 @@ class ngsimDataset(Dataset):
            # direction = all_field[0, DatasetFields.DIRECTION.value]
             return (*self.processed_samples[idx], vel, acc)
         
-        st_time_init = datetime.datetime.now()
         locId = self.samples[idx, DatasetFields.LOCATION.value]
         vehId = self.samples[idx, DatasetFields.VEHICLE_ID.value]
         t = self.samples[idx, DatasetFields.FRAME_ID.value]
@@ -319,14 +317,13 @@ class ngsimDataset(Dataset):
 
     ## Collate function for dataloader
     def collate_fn(self, samples):
-        st_time = datetime.datetime.now()
         nbrs_batch = torch.zeros(
             30 // self.d_s, len(samples), self.grid_size[0] * self.grid_size[1], 2
         )
         veh_ID_batch = torch.zeros(len(samples), 1)
         vel_batch = torch.zeros(len(samples), 1)
         acc_batch = torch.zeros(len(samples), 1)
-       # direction_batch = torch.zeros(len(samples), 1)
+
         time_batch = torch.zeros(len(samples), 1)
         dsID_batch = []
         hist_batch = torch.zeros(30 // self.d_s, len(samples), 2)
@@ -337,8 +334,7 @@ class ngsimDataset(Dataset):
             veh_ID_batch[sampleId, :] = torch.tensor(vehId).type(torch.int64)
             vel_batch[sampleId, :] = torch.tensor(vel).type(torch.float)
             acc_batch[sampleId, :] = torch.tensor(acc).type(torch.float)
-          #  direction_batch[sampleId, :] = torch.tensor(direction).type(torch.int64)
-            
+                        
             time_batch[sampleId, :] = torch.tensor(t).type(torch.int64)
             dsID_batch.append(locId)
 

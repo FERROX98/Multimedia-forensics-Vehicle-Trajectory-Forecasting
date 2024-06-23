@@ -6,6 +6,7 @@ from tqdm import tqdm
 from models import highwayNetDiscriminator, highwayNetGenerator
 import sys
 import geopy.distance
+
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 sys.path.insert(1, "Model")
@@ -24,13 +25,13 @@ import time
 import math
 import datetime
 import logging
-device = "cuda" if torch.cuda.is_available() else "cpu"
-torch.device(device)
-FORMAT = "[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s"
-logging.basicConfig(level=logging.INFO, format=FORMAT, stream=sys.stdout)
-logger = logging.getLogger(__name__)
+
 from torch import nan, nn
 from tensorboardX import SummaryWriter
+
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+torch.device(device)
 
 
 def train(
@@ -49,33 +50,32 @@ def train(
 
     opt_generator = torch.optim.Adam(generator.parameters(), lr=0.005)
     opt_discriminator = torch.optim.Adam(discriminator.parameters(), lr=0.005)
+    
     scheduler_d = StepLR(opt_generator, step_size=3, gamma=0.1)
     scheduler_g = StepLR(opt_discriminator, step_size=30, gamma=0.1)
-    init_tr_tipe = datetime.datetime.now()
+
     for epoch_num in range(train_epochs):
 
         current_loss_g = 0
         current_loss_d = 0
+        
         n_loss_count_g = 0
         n_loss_count_d = 0
-        epoch_rmse_loss = 0
+                
         d_steps_left = 1
         g_steps_left = 2
-        flg_init = False
+       
         epoch_t1 = torch.zeros(1).cuda()
         epoch_t2 = torch.zeros(1).cuda()
         epoch_t3 = torch.zeros(1).cuda()
         epoch_t4 = torch.zeros(1).cuda()
         epoch_t5 = torch.zeros(1).cuda()
-        st_time_load_dataset = datetime.datetime.now()
+        
         for i, data in enumerate(tqdm(trDataloader)):
-            st_time = datetime.datetime.now()
-            if not flg_init:
-               # print("Time to load dataset: ", st_time - st_time_load_dataset)
-                flg_init = True
+          
+
             if d_steps_left > 0:
                 current_loss_d += discriminator_step(
-                    epoch_num,
                     data,
                     generator,
                     discriminator,
@@ -87,7 +87,6 @@ def train(
 
             elif g_steps_left > 0:
                 tmp_loss,t1,t2,t3,t4,t5 = generator_step(
-                    epoch_num,
                     data,
                     generator,
                     discriminator,
@@ -96,45 +95,43 @@ def train(
                     g_loss_fn_2,
                   
                 )
-               # epoch_rmse_loss += rmse_loss.item()
                 current_loss_g += tmp_loss.item()
+                
                 epoch_t1 += t1.item()
                 epoch_t2 += t2.item()
                 epoch_t3 += t3.item()
                 epoch_t4 += t4.item()
                 epoch_t5 += t5.item()
+                
                 n_loss_count_g += 1
                 g_steps_left -= 1
 
             torch.cuda.synchronize()
-            #print("Time 1: %s", datetime.datetime.now() - st_time)
-            # Skip the rest if we are not at the end of an iteration
+        
             if d_steps_left > 0 or g_steps_left > 0:
                 continue
-           # print("Time 2 : %s", datetime.datetime.now() - st_time)
-            # reset steps
+
             d_steps_left = 1
             g_steps_left = 2
 
-        batch_time = datetime.datetime.now() - st_time
         epoch_loss_d = current_loss_d / n_loss_count_d
         epoch_loss_g = current_loss_g / n_loss_count_g
-        epoch_loss_rmse = epoch_rmse_loss / n_loss_count_g
+        
         epoch_t1 = epoch_t1 / n_loss_count_g
         epoch_t2 = epoch_t2 / n_loss_count_g
         epoch_t3 = epoch_t3 / n_loss_count_g
         epoch_t4 = epoch_t4 / n_loss_count_g
         epoch_t5 = epoch_t5 / n_loss_count_g
+        
         writer.add_scalar("Data/loss_train_D", epoch_loss_d, epoch_num)
         writer.add_scalar("Data/loss_train_G", epoch_loss_g, epoch_num)
-       # writer.add_scalar("Data/loss_train_G_rmse", epoch_loss_rmse, epoch_num)
+
         writer.add_scalar("Data/RMSE_t1", epoch_t1.item(), epoch_num)
         writer.add_scalar("Data/RMSE_t2", epoch_t2.item(), epoch_num)
         writer.add_scalar("Data/RMSE_t3", epoch_t3.item(), epoch_num)
         writer.add_scalar("Data/RMSE_t4", epoch_t4.item(), epoch_num)
         writer.add_scalar("Data/RMSE_t5", epoch_t5.item(), epoch_num)
 
-        # TODO write the accuracy of discriminator
         print(
             "Epoch no:",
             epoch_num + 1,
@@ -144,26 +141,28 @@ def train(
             format(epoch_loss_d, "0.4f"),
             "| Avg train loss_G:",
             format(epoch_loss_g, "0.4f"),
-          #  "| Avg train loss_G_rmse:",
-          #  format(epoch_loss_rmse, "0.4f"),
             "| loss t1 :", epoch_t1.item(),
             "| loss t2 :", epoch_t2.item(),
             "| loss t3 :", epoch_t3.item(),
             "| loss t4 :", epoch_t4.item(),
             "| loss t5 :", epoch_t5.item(),
-           # "| Epoch Time(s):",
-           # batch_time,
         )
+        
         current_loss_d = 0
         current_loss_g = 0
+        epoch_t1 = 0
+        epoch_t2 = 0
+        epoch_t3 = 0
+        epoch_t4 = 0
+        epoch_t5 = 0
+        
         print("Calculating on validation set")
-        #validate(valDataloader, generator, discriminator, writer, epoch_num)
+        validate(valDataloader, generator, discriminator, writer, epoch_num)
         scheduler_d.step()
         scheduler_g.step()
     writer.flush()
     writer.close()
     
-  #  print("total training time: ", datetime.datetime.now() - init_tr_tipe)
     torch.save(
         generator.state_dict(),
         "Model/Config/gen.tar",
@@ -193,31 +192,24 @@ def validate(
     
     loss_g = 0
     loss_d = 0
+    
     val_t1 = 0
     val_t2 = 0
     val_t3 = 0
     val_t4 = 0
     val_t5 = 0
+    
     n_loss_count_d = 0
     n_loss_count_g = 0
     
     acc = 0.0
     tot_traj = 0
     
-    flg_init = False
-    st_time_load_dataset = datetime.datetime.now()
-    
     with torch.no_grad():
         for i, data in enumerate(valDataloader):
-            
-            # if not flg_init:
-            #     print(
-            #         "Time to load Val dataset: ",
-            #         datetime.datetime.now() - st_time_load_dataset,
-            #     )
-            #     flg_init = True
                 
             history, nbrs, fut, _, _, _, vel, acc_vehi  = data
+            
             history = history.cuda()
             nbrs = nbrs.cuda()
             fut = fut.cuda()
@@ -248,6 +240,7 @@ def validate(
 
                 loss_d += loss_fake.item()
                 loss_d += loss_real.item()
+                
                 n_loss_count_d += 1
                 d_steps_left -= 1
 
@@ -255,12 +248,8 @@ def validate(
                 traj_fake = generator(history, nbrs, vel, acc_vehi)
                 
                 t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut)
-                #loss_g += loss_g_rmse.item()
-                loss_g+= t1.item()
-                loss_g+= t2.item()
-                loss_g+= t3.item()
-                loss_g+= t4.item()
-                loss_g+= t5.item()
+
+                loss_g+= tot.item()
                 
                 val_t1 += t1.item()    
                 val_t2 += t2.item()
@@ -273,6 +262,7 @@ def validate(
                 scores_fake = discriminator(traj_fake)
 
                 loss_g += g_loss_fn(scores_fake, torch.ones_like(scores_fake)).item()
+                
                 n_loss_count_g += 1
                 g_steps_left -= 1
 
@@ -280,8 +270,10 @@ def validate(
                 continue
 
         acc = 100 * (acc / tot_traj)
+        
         loss_d = loss_d / n_loss_count_d
         loss_g = loss_g / n_loss_count_g
+        
         val_t1 = val_t1 / n_loss_count_g
         val_t2 = val_t2 / n_loss_count_g
         val_t3 = val_t3 / n_loss_count_g
@@ -300,6 +292,7 @@ def validate(
         writer.add_scalar("Data/accuracy_val_D", acc, epoch_num)
         writer.add_scalar("Data/loss_val_D", loss_d, epoch_num)
         writer.add_scalar("Data/loss_val_G", loss_g, epoch_num)
+        
         writer.add_scalar("Data/RMSE_val_t1", val_t1, epoch_num)
         writer.add_scalar("Data/RMSE_val_t2", val_t2, epoch_num)
         writer.add_scalar("Data/RMSE_val_t3", val_t3, epoch_num)
@@ -311,7 +304,6 @@ def validate(
 
 
 def discriminator_step(
-    epoch_num,
     data,
     generator,
     discriminator,
@@ -319,9 +311,7 @@ def discriminator_step(
     d_loss_fn,
 ):
     history, nbrs, fut, _, _, _, vel, acc = data
-    if torch.isnan(history).any() or torch.isnan(nbrs).any() or torch.isnan(fut).any() or torch.isnan(vel).any() or torch.isnan(acc).any():
-        print("NAN")
-
+  
     history = history.cuda()
     nbrs = nbrs.cuda()
     fut = fut.cuda()
@@ -338,16 +328,6 @@ def discriminator_step(
     y_pred_fake = discriminator(traj_fake)
     y_pred_real = discriminator(traj_real)
 
-    if (
-        y_pred_fake.max(dim=0)[0] > 1
-        or y_pred_fake.min(dim=0)[0] < 0
-        or y_pred_real.max(dim=0)[0] > 1
-        or y_pred_real.min(dim=0)[0] < 0
-        or y_pred_real.max(dim=0)[0] == nan
-    ):
-        print("y_pred_fake", y_pred_fake)
-        print("y_pred_real", y_pred_real)
-
     loss_fake = d_loss_fn(y_pred_fake, torch.zeros_like(y_pred_fake))
     loss_real = d_loss_fn(y_pred_real, torch.ones_like(y_pred_real))
     loss += loss_fake
@@ -355,14 +335,13 @@ def discriminator_step(
 
     optimizer_d.zero_grad()
     loss.backward()
-   # nn.utils.clip_grad_norm_(discriminator.parameters(), 10)
+    nn.utils.clip_grad_norm_(discriminator.parameters(), 10)
     optimizer_d.step()
 
     return loss
 
 
 def generator_step(
-    epoch_num,
     data,
     generator,
     discriminator,
@@ -374,8 +353,7 @@ def generator_step(
     loss = torch.zeros(1).cuda()
 
     history, nbrs, fut, _, _, _, vel, acc = data
-    if torch.isnan(history).any() or torch.isnan(nbrs).any() or torch.isnan(fut).any() or torch.isnan(vel).any() or torch.isnan(acc).any() or torch.isnan(history).any() or torch.isnan(nbrs).any() or torch.isnan(fut).any() or torch.isnan(vel).any() or torch.isnan(acc).any():
-        print("NAN")
+
     history = history.cuda()
     nbrs = nbrs.cuda()
     fut = fut.cuda()
@@ -384,15 +362,10 @@ def generator_step(
 
     traj_fake = generator(history, nbrs, vel, acc)
 
-    # TODO vedere se cambiare output a solo 2 dimensioni
     t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut)
-   
-    # loss +=  t1
-    # loss +=  t2
-    # loss +=  t3
-    # loss +=  t4
-    # loss +=  t5
+    
     loss+=tot
+    
     traj_fake = torch.cat([history, traj_fake[:, :, :]], dim=0)
 
     scores_fake = discriminator(traj_fake)
@@ -401,7 +374,7 @@ def generator_step(
 
     optimizer_g.zero_grad()
     loss.backward()
-   # nn.utils.clip_grad_norm_(generator.parameters(), 10)
+    nn.utils.clip_grad_norm_(generator.parameters(), 10)
     optimizer_g.step()
     
     return loss,t1,t2,t3,t4,t5
@@ -411,31 +384,28 @@ if __name__ == "__main__":
 
     clean_train_values("SperimentalValue")
     writer = SummaryWriter("SperimentalValue")
-    # writer.add_scalar('Loss/train', np.random.random(), 1)
-    # writer.add_scalar('Loss/test', np.random.random(), 1)
-    # writer.add_scalar('Accuracy/train', np.random.random(), 1)
-    # writer.add_scalar('Accuracy/test', np.random.random(), 1)
    
-    start_time = datetime.datetime.now()
-
+    batch_size = 48
+    
     # Model Arguments
     args = load_args()
 
     # Initialize network
     gen, dis = init_model(args)
-    input_size = ((15, 24, 2), (15, 24, 9, 2), ( 24, 1), ( 24, 1))
-    mem_usg_g = get_model_memory_usage_gen(gen, (15, 64, 2), (15, 64, 9, 2), ( 64, 1), ( 64, 1))
-    # mem_usg_d= get_model_memory_usage(dis,input_size)
-    print("Memory usage of generator: ", mem_usg_g)
-    # print("Memory usage of discriminator: ", mem_usg_d)
     
+    mem_usg_g = get_model_memory_usage_gen(gen, (15, batch_size, 2), (15, batch_size, 9, 2), ( batch_size, 1), ( batch_size, 1))
+    print("Memory usage of generator: ", mem_usg_g)
+ 
     # Load dataset
     trDataloader, valDataloader = load_dataset(
-        30, 48, 128
+        30, 256, batch_size
     )  # historical step 3s prediction 5s
-
+    
+    start_time = datetime.datetime.now()
+    
     # Train
     train(trDataloader, valDataloader, 10, gen, dis)
-
+    
     end_time = datetime.datetime.now()
+    
     print("Total training time: ", end_time - start_time)

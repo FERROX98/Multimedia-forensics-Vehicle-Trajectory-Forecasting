@@ -138,7 +138,7 @@ def load_dataset(t_h, t_f, batch_size=128):
         valSet,
         batch_size=batch_size,
         # shuffle=True,
-        num_workers=4,
+        num_workers=6,
         collate_fn=valSet.collate_fn,
         pin_memory=True,
     )
