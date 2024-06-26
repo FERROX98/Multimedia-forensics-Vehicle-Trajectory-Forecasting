@@ -9,7 +9,7 @@ Vehicle trajectory forecasting is a critical component in autonomous driving sys
 ## Crucial Steps and Goals
 
 1. **Data Preprocessing**: The preprocessing steps involve loading trajectory data, selecting relevant subsets, and preparing the data for training and evaluation.
-2. **Model Architecture**: The model architecture is inspired by the conv-social-pooling repository, focusing on capturing the interactions between vehicles using LSTM and attention mechanisms.
+2. **Model Architecture**: The model architecture is inspired by the conv-social-pooling repository, focusing on capturing the interactions between vehicles using GAN LSTMs.
 3. **Training**: The training loop includes loss computation, backpropagation, and optimization steps. Monitoring the training progress with ETA calculations helps manage long training processes.
 4. **Evaluation**: Evaluating the model on a test dataset helps in understanding its performance and identifying areas for improvement.
 5. **Goal**: The ultimate goal is to accurately predict future trajectories of vehicles based on their past movements and interactions with neighboring vehicles, enhancing the safety and reliability of autonomous driving systems.
@@ -44,12 +44,16 @@ In this project, we are using a CSV file associated with the NGSIM dataset. The 
 
 The preprocessing steps are as follows:
 
-1. Load Data: The data is loaded from the CSV file and preprocessed to remove duplicates and irrelevant entries. Each entry in the dataset contains information about a vehicle at a specific time frame.
+1. Load Data: The data is loaded from the CSV file and preprocessed to remove duplicates and irrelevant entries. Each entry in the dataset contains information about a vehicle at a specific time frame, and is downsampled from 10FPs to 5FPs, also are filtered the "edge cases" in which there are not enough frame for the history or for the future.
+
 2. Filter and Structure Data: The data is filtered and structured into appropriate formats to facilitate further processing and analysis. This involves organizing the data by location and vehicle ID filtering it by vehicle ID, sorting the data by frame ID, and then extracting sequences between specified frame ranges (from frame 30 to frame -50). This ensures that each extracted sequence meets the required criteria for further analysis.
 3. Split Data: The dataset is split into training, validation, and test sets based on the specified ratios. This ensures that the model can be trained, validated, and tested on different subsets of the data.
-4. Create Tracks: Vehicle tracks are created for each location. A track consists of the trajectory of a vehicle over time, capturing its movement and attributes frame by frame.
+
+4. Create Tracks: Vehicle tracks are created for each location. A track consists of the trajectory of a vehicle over time (Array of coordinates for the entire 8 seconds in which we focus on), capturing its movement and attributes like velocity and acceleration frame by frame.
+
 5. Filter Edge Cases: Trajectories with insufficient frames are filtered out to ensure the model has enough data to make accurate predictions.
-6. A 3x3 grid with cells of 4 meters each is used to include the neighbors of each vehicle in the dataset. This grid helps capture the social context of vehicle movements:
+
+6. A 3x3 grid with cells (4x4 meters) each is used to include the neighbors of each vehicle in the dataset. This grid helps capture the social context of vehicle movements:
 
 <!-- ## Extraction From Video Sequence
 For completeness, we have also considered a model based on YOLO for extracting information from video sequences. YOLO is a state-of-the-art, real-time object detection system that can identify and locate multiple objects in video frames with high accuracy. -->
