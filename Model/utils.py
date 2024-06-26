@@ -11,42 +11,29 @@ from models import highwayNetDiscriminator, highwayNetGenerator
 from dataset import ngsimDataset
 from torch.utils.data import DataLoader
 import os, shutil
+from torch import nn 
 
+mse = nn.MSELoss()
 
 def rmse_long(predicted_values, true_values):
 
-    # t1 = torch.sqrt(torch.mean(((predicted_values[:5, :, 0] - true_values[:5, :, 0]) ** 2)))
-    # t2 = torch.sqrt(torch.mean(((predicted_values[5:10, :, 0] - true_values[5:10, :, 0]) ** 2)))
-    # t3 = torch.sqrt(torch.mean(((predicted_values[10:15:, :, 0] - true_values[10:15:, :, 0]) ** 2)))
-    # t4 = torch.sqrt(torch.mean(((predicted_values[15:20, :, 0] - true_values[15:20, :, 0]) ** 2)))
-    # t5 = torch.sqrt(torch.mean(((predicted_values[20:25, :, 0] - true_values[20:25, :, 0]) ** 2)))
-    t1 = torch.sqrt(torch.mean(((predicted_values[:5, :, 0] - true_values[:5, :, 0]) ** 2)))
-    t2 = torch.sqrt(torch.mean(((predicted_values[5:10, :, 0] - true_values[5:10, :, 0]) ** 2)))
-    t3 = torch.sqrt(torch.mean(((predicted_values[10:15:, :, 0] - true_values[10:15:, :, 0]) ** 2)))
-    t4 = torch.sqrt(torch.mean(((predicted_values[15:20, :, 0] - true_values[15:20, :, 0]) ** 2)))
-    t5 = torch.sqrt(torch.mean(((predicted_values[20:25, :, 0] - true_values[20:25, :, 0]) ** 2)))
+    t1 = mse(predicted_values[:5, :, 0], true_values[:5, :, 0])
+    t2 = mse(predicted_values[5:10, :, 0], true_values[5:10, :, 0])
+    t3 = mse(predicted_values[10:15, :, 0], true_values[10:15, :, 0])
+    t4 = mse(predicted_values[15:20, :, 0], true_values[15:20, :, 0])
+    t5 = mse(predicted_values[20:25, :, 0], true_values[20:25, :, 0])
 
     return t1, t2, t3, t4, t5
 
 def rmse_lat(predicted_values, true_values):
-    # t1 = torch.sqrt(torch.mean(((predicted_values[:5, :, 1] - true_values[:5, :, 1]) ** 2)))
-    # t2 = torch.sqrt(torch.mean(((predicted_values[5:10, :, 1] - true_values[5:10, :, 1]) ** 2)))
-    # t3 = torch.sqrt(torch.mean(((predicted_values[10:15:, :, 1] - true_values[10:15:, :, 1]) ** 2)))
-    # t4 = torch.sqrt(torch.mean(((predicted_values[15:20, :, 1] - true_values[15:20, :, 1]) ** 2)))
-    # t5 = torch.sqrt(torch.mean(((predicted_values[20:25, :, 1] - true_values[20:25, :, 1]) ** 2)))
-    t1 = torch.sqrt(torch.mean(((predicted_values[:5, :, 1] - true_values[:5, :, 1]) ** 2)))
-    t2 = torch.sqrt(torch.mean(((predicted_values[5:10, :, 1] - true_values[5:10, :, 1]) ** 2)))
-    t3 = torch.sqrt(torch.mean(((predicted_values[10:15:, :, 1] - true_values[10:15:, :, 1]) ** 2)))
-    t4 = torch.sqrt(torch.mean(((predicted_values[15:20, :, 1] - true_values[15:20, :, 1]) ** 2)))
-    t5 = torch.sqrt(torch.mean(((predicted_values[20:25, :, 1] - true_values[20:25, :, 1]) ** 2)))
+  
+    t1 = mse(predicted_values[:5, :, 1], true_values[:5, :, 1])
+    t2 = mse(predicted_values[5:10, :, 1], true_values[5:10, :, 1]) 
+    t3 = mse(predicted_values[10:15, :, 1], true_values[10:15, :, 1])
+    t4 = mse(predicted_values[15:20, :, 1], true_values[15:20, :, 1])
+    t5 = mse(predicted_values[20:25, :, 1], true_values[20:25, :, 1])
     
     return t1, t2, t3, t4, t5
-
-def compute_geo_distance(lat1, lon1, lat2, lon2):
-    coords_1 = (lat1, lon1)
-    coords_2 = (lat2, lon2)
-    return geopy.distance.geodesic(coords_1, coords_2).m
-
 
 def rmse(predicted_values, true_values):
     # Convert coordinates from feet to meters   
@@ -59,21 +46,15 @@ def rmse(predicted_values, true_values):
     tot_t3_loss = (lat_t3+lon_t3)
     tot_t4_loss = (lat_t4+lon_t4)
     tot_t5_loss = (lat_t5+lon_t5)
-    tot= torch.sqrt(torch.mean(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss))
-    tot= torch.mean(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss)
+ 
+    tot = torch.sqrt(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss)
+   
+    tot_t1 = torch.sqrt(tot_t1_loss)
+    tot_t2 = torch.sqrt(tot_t2_loss)
+    tot_t3 = torch.sqrt(tot_t3_loss)
+    tot_t4 = torch.sqrt(tot_t4_loss)
+    tot_t5 = torch.sqrt(tot_t5_loss)
 
-    # tot_t1 = torch.sqrt(torch.mean((lat_t1+lon_t1)))
-    # tot_t2 = torch.sqrt(torch.mean((lat_t2+lon_t2)))
-    # tot_t3 = torch.sqrt(torch.mean((lat_t3+lon_t3)))
-    # tot_t4 = torch.sqrt(torch.mean((lat_t4+lon_t4)))
-    # tot_t5 = torch.sqrt(torch.mean((lat_t5+lon_t5)))
-    tot_t1 = torch.sqrt(torch.mean((lat_t1+lon_t1)))
-    tot_t2 = torch.sqrt(torch.mean((lat_t2+lon_t2)))
-    tot_t3 = torch.sqrt(torch.mean((lat_t3+lon_t3)))
-    tot_t4 = torch.sqrt(torch.mean((lat_t4+lon_t4)))
-    tot_t5 = torch.sqrt(torch.mean((lat_t5+lon_t5)))
-    #tot_rmse_in_meters = geopy.distance.geodesic(coords_1, coords_2).km
-    # Total RMSE
     return tot_t1, tot_t2, tot_t3, tot_t4, tot_t5, tot
 
 
