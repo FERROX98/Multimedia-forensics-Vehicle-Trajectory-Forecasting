@@ -4,7 +4,7 @@ This repository contains the implementation of a vehicle trajectory forecasting 
 
 ## Overview
 
-Vehicle trajectory forecasting is a critical component in autonomous driving systems, enabling vehicles to anticipate the movements of others on the road. This project leverages deep learning techniques to model the complex interactions between vehicles and predict their future positions.
+Vehicle trajectory forecasting is a critical component in autonomous driving systems, enabling vehicles to anticipate the movements of others on the road. This project leverages deep learning techniques to learn the complex interactions between vehicles and predict its future positions.
 
 ## Crucial Steps and Goals
 
@@ -45,14 +45,10 @@ In this project, we are using a CSV file associated with the NGSIM dataset. The 
 The preprocessing steps are as follows:
 
 1. Load Data: The data is loaded from the CSV file and preprocessed to remove duplicates and irrelevant entries. Each entry in the dataset contains information about a vehicle at a specific time frame, and is downsampled from 10FPs to 5FPs, also are filtered the "edge cases" in which there are not enough frame for the history or for the future.
-
 2. Filter and Structure Data: The data is filtered and structured into appropriate formats to facilitate further processing and analysis. This involves organizing the data by location and vehicle ID filtering it by vehicle ID, sorting the data by frame ID, and then extracting sequences between specified frame ranges (from frame 30 to frame -50). This ensures that each extracted sequence meets the required criteria for further analysis.
 3. Split Data: The dataset is split into training, validation, and test sets based on the specified ratios. This ensures that the model can be trained, validated, and tested on different subsets of the data.
-
 4. Create Tracks: Vehicle tracks are created for each location. A track consists of the trajectory of a vehicle over time (Array of coordinates for the entire 8 seconds in which we focus on), capturing its movement and attributes like velocity and acceleration frame by frame.
-
 5. Filter Edge Cases: Trajectories with insufficient frames are filtered out to ensure the model has enough data to make accurate predictions.
-
 6. A 3x3 grid with cells (4x4 meters) each is used to include the neighbors of each vehicle in the dataset. This grid helps capture the social context of vehicle movements:
 
 <!-- ## Extraction From Video Sequence
