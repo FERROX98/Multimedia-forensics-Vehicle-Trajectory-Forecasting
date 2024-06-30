@@ -41,11 +41,11 @@ def rmse(predicted_values, true_values):
     true_values = true_values * 0.3048
     lat_t1, lat_t2, lat_t3, lat_t4, lat_t5 = rmse_lat(predicted_values, true_values)
     lon_t1, lon_t2, lon_t3, lon_t4, lon_t5  = rmse_long(predicted_values, true_values)
-    tot_t1_loss = (lat_t1+lon_t1)
-    tot_t2_loss = (lat_t2+lon_t2)
-    tot_t3_loss = (lat_t3+lon_t3)
-    tot_t4_loss = (lat_t4+lon_t4)
-    tot_t5_loss = (lat_t5+lon_t5)
+    tot_t1_loss = torch.sqrt((lat_t1+lon_t1))
+    tot_t2_loss = torch.sqrt((lat_t2+lon_t2))
+    tot_t3_loss = torch.sqrt((lat_t3+lon_t3))
+    tot_t4_loss = torch.sqrt((lat_t4+lon_t4))
+    tot_t5_loss = torch.sqrt((lat_t5+lon_t5))
  
     tot = torch.sqrt(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss)
    

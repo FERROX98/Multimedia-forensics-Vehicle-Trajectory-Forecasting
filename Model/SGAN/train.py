@@ -388,7 +388,7 @@ if __name__ == "__main__":
     clean_train_values("SperimentalValue/Train")
     writer = SummaryWriter("SperimentalValue/Test")
    
-    batch_size = 48
+    batch_size = 128
     
     # Model Arguments
     args = load_args()
@@ -407,7 +407,7 @@ if __name__ == "__main__":
     start_time = datetime.datetime.now()
     
     # Train
-    train(trDataloader, valDataloader, 5, gen, dis)
+    train(trDataloader, valDataloader, 10, gen, dis)
     
     end_time = datetime.datetime.now()
     
