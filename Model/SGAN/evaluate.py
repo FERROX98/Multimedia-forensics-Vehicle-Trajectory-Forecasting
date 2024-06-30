@@ -164,41 +164,20 @@ def test():
     writer.add_scalar("RMSE_val_t4", val_t4)
     writer.add_scalar("RMSE_val_t5", val_t5)
 
-    # target_ID = sum(target_ID, [])
-    # target_ID = pd.DataFrame(target_ID)
-
-    # target_Loc = sum(target_Loc, [])
-    # target_Loc = pd.DataFrame(target_Loc)
-
-    # T = sum(T, [])
-    # T = pd.DataFrame(T)
-
-    # pred_x = np.concatenate(pred_x, axis=1)
-    # pred_x = pd.DataFrame(pred_x)
-    
-    # writer.add_scalars("pred_x", pred_x, 0)
-
-    # pred_y = np.concatenate(pred_y, axis=1)
-    # pred_y = pd.DataFrame(pred_y)
-    
-    # writer.add_scalars("pred_y", pred_y, 0)
-
     print("lossVal is:", loss_g)
     print("total test sample number:", num_test)
 
-
     print(
         "RMSE for each step is:", loss_g**0.5 
-    )  # Calculate RMSE and convert from feet to meters
-
-   # print("MAE for each step is:", mae / count_mae)
-    #print("Overall RMSE is:", torch.pow(sum(loss_g) / sum(n_loss_count_g), 0.5) * 0.3048)
-  #  print("Overall MAE is:", sum(mae) / sum(count_mae))
-
+    )
+    
+    print(
+        "RMSE for t1 step is:", val_t1**0.5, "RMSE for t2 step is:", val_t2**0.5, "RMSE for t3 step is:", val_t3**0.5, "RMSE for t4 step is:", val_t4**0.5, "RMSE for t5 step is:", val_t5**0.5
+    )
 
 if __name__ == "__main__":
     gen, dis = load_model()
-    clean_train_values("SperimentalValue/Test")
-    writer = SummaryWriter("SperimentalValue/Test")
+    clean_train_values("SperimentalValue/TestEval")
+    writer = SummaryWriter("SperimentalValue/TestEval")
     _, _, tsDataloader = load_dataset(30,50,batch_size=128)
     test()
