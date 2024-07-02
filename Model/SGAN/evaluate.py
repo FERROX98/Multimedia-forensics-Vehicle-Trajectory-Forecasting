@@ -74,8 +74,8 @@ def test():
 
                 pred_traj_fake = gen(history, nbrs, vel, acc_vehi)
 
-                traj_real = torch.cat([history, fut], dim=0)
-                traj_fake = torch.cat([history, pred_traj_fake[:, :, :]], dim=0)
+                traj_real = torch.cat([history[:, :, :2], fut], dim=0)
+                traj_fake = torch.cat([history[:, :, :2], pred_traj_fake[:, :, :2]], dim=0)
 
                 y_pred_fake = dis(traj_fake)
                 y_pred_real = dis(traj_real)
@@ -101,7 +101,7 @@ def test():
             elif g_steps_left > 0:
                 traj_fake = gen(history, nbrs, vel, acc_vehi)
 
-                t1, t2, t3, t4, t5, tot = g_loss_fn2(traj_fake[:, :, :], fut)
+                t1, t2, t3, t4, t5, tot = g_loss_fn2(traj_fake[:, :, :2], fut)
 
                 loss_g += tot.item()
 
@@ -111,7 +111,7 @@ def test():
                 val_t4 += t4.item()
                 val_t5 += t5.item()
 
-                traj_fake = torch.cat([history, traj_fake[:, :, :]], dim=0)
+                traj_fake = torch.cat([history[:, :, :2], traj_fake[:, :, :2]], dim=0)
 
                 scores_fake = dis(traj_fake)
 
@@ -122,7 +122,7 @@ def test():
                     
                 fut_pred_x = traj_fake[:,:,0].detach()
                 fut_pred_x = fut_pred_x.cpu().numpy()
-                #print (type(fut_pred_x)) # (25, 128)
+           
                 fut_pred_y = traj_fake[:,:,1].detach()
                 fut_pred_y = fut_pred_y.cpu().numpy()
                 pred_x.append(fut_pred_x)

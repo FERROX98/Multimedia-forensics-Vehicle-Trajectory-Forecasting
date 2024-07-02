@@ -252,10 +252,25 @@ class ngsimDataset(Dataset):
             all_field = self.samples_csv[((self.samples_csv[:, DatasetFields.LOCATION.value] == self.processed_samples[idx][4]) &
                                         (self.samples_csv[:, DatasetFields.VEHICLE_ID.value] == self.processed_samples[idx][5]) &
                                         (self.samples_csv[:, DatasetFields.FRAME_ID.value] == self.processed_samples[idx][3])), :]
+            
+            all_field_past = self.samples_csv[((self.samples_csv[:, DatasetFields.LOCATION.value] == self.processed_samples[idx][4]) &
+                                        (self.samples_csv[:, DatasetFields.VEHICLE_ID.value] == self.processed_samples[idx][5])), :]
+            
             if (len(all_field) == 0):
                 return (*self.processed_samples[idx], torch.tensor(10), torch.tensor(0.5))
-            vel = all_field[0, DatasetFields.V_VEL.value] if all_field[0, DatasetFields.V_VEL.value] == all_field[0, DatasetFields.V_VEL.value] else np.asarray(10)
-            acc = all_field[0, DatasetFields.V_ACC.value] if all_field[0, DatasetFields.V_ACC.value] == all_field[0, DatasetFields.V_ACC.value]  else np.asarray(0.5)
+            vel = all_field[0, DatasetFields.V_VEL.value] if all_field[0, DatasetFields.V_VEL.value] == all_field[0, DatasetFields.V_VEL.value] else np.asarray(1)
+            acc = all_field[0, DatasetFields.V_ACC.value] if all_field[0, DatasetFields.V_ACC.value] == all_field[0, DatasetFields.V_ACC.value]  else np.asarray(1)
+            
+        
+            frame_history = all_field_past[all_field_past[:, DatasetFields.FRAME_ID.value] <= self.processed_samples[idx][3]]
+            vel_past = [ x if x==x else 1 for x in frame_history[-30::2, DatasetFields.V_VEL.value] ]
+            acc_past = [ x if x==x else 1 for x in frame_history[-30::2, DatasetFields.V_ACC.value] ]
+            if len(vel_past) < 15:
+                vel_past = np.pad(vel_past, (15-len(vel_past), 0), 'constant', constant_values=(1))
+            if len(acc_past) < 15:
+                acc_past = np.pad(acc_past, (15-len(acc_past), 0), 'constant', constant_values=(1))
+
+            self.processed_samples[idx] = (np.concatenate((self.processed_samples[idx][0], np.asarray(vel_past).reshape(15,1),np.asarray(acc_past).reshape(15,1)),1), self.processed_samples[idx][1],self.processed_samples[idx][2],self.processed_samples[idx][3],self.processed_samples[idx][4],self.processed_samples[idx][5])
            # direction = all_field[0, DatasetFields.DIRECTION.value]
             return (*self.processed_samples[idx], vel, acc)
         
@@ -326,7 +341,7 @@ class ngsimDataset(Dataset):
 
         time_batch = torch.zeros(len(samples), 1)
         dsID_batch = []
-        hist_batch = torch.zeros(30 // self.d_s, len(samples), 2)
+        hist_batch = torch.zeros(30 // self.d_s, len(samples), 4)
         fut_batch = torch.zeros(50 // self.d_s, len(samples), 2)
 
         for sampleId, (hist, neighbors, fut, t, locId, vehId, vel, acc ) in enumerate(samples):
@@ -338,7 +353,7 @@ class ngsimDataset(Dataset):
             time_batch[sampleId, :] = torch.tensor(t).type(torch.int64)
             dsID_batch.append(locId)
 
-            hist_batch[0 : len(hist), sampleId, :] =  hist[:, :]
+            hist_batch[0 : len(hist), sampleId, :] =  torch.tensor(hist[:, :])
             
             fut_batch[0 : len(fut), sampleId, :] = fut[:, :]
         

@@ -41,19 +41,19 @@ def rmse(predicted_values, true_values):
     true_values = true_values * 0.3048
     lat_t1, lat_t2, lat_t3, lat_t4, lat_t5 = rmse_lat(predicted_values, true_values)
     lon_t1, lon_t2, lon_t3, lon_t4, lon_t5  = rmse_long(predicted_values, true_values)
-    tot_t1_loss = torch.mean((lat_t1+lon_t1))
-    tot_t2_loss = torch.mean((lat_t2+lon_t2))
-    tot_t3_loss = torch.mean((lat_t3+lon_t3))
-    tot_t4_loss = torch.mean((lat_t4+lon_t4))
-    tot_t5_loss = torch.mean((lat_t5+lon_t5))
+    tot_t1_loss = torch.sqrt(torch.mean((lat_t1+lon_t1)**2))
+    tot_t2_loss = torch.sqrt(torch.mean((lat_t2+lon_t2)**2))
+    tot_t3_loss = torch.sqrt(torch.mean((lat_t3+lon_t3)**2))
+    tot_t4_loss = torch.sqrt(torch.mean((lat_t4+lon_t4)**2))
+    tot_t5_loss = torch.sqrt(torch.mean((lat_t5+lon_t5)**2))
  
     tot = torch.sqrt(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss)
    
-    tot_t1 = torch.sqrt(tot_t1_loss)
-    tot_t2 = torch.sqrt(tot_t2_loss)
-    tot_t3 = torch.sqrt(tot_t3_loss)
-    tot_t4 = torch.sqrt(tot_t4_loss)
-    tot_t5 = torch.sqrt(tot_t5_loss)
+    tot_t1 = tot_t1_loss # torch.sqrt(tot_t1_loss)
+    tot_t2 = tot_t2_loss # torch.sqrt(tot_t2_loss)
+    tot_t3 = tot_t3_loss# torch.sqrt(tot_t3_loss)
+    tot_t4 = tot_t4_loss#torch.sqrt(tot_t4_loss)
+    tot_t5 = tot_t5_loss#torch.sqrt(tot_t5_loss)
 
     return tot_t1, tot_t2, tot_t3, tot_t4, tot_t5, tot
 
@@ -114,7 +114,7 @@ def load_dataset(t_h, t_f, batch_size=128):
     trSet = ngsimDataset(
         "Data/ValSet_samples.csv",
         "Data/ValSet_tracks.csv",
-        samples=train_samples
+        samples=val_samples
     )
     
     tsSet = ngsimDataset(

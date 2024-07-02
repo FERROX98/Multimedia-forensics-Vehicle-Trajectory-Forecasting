@@ -77,7 +77,7 @@ class highwayNetGenerator(nn.Module):
         self,
         debug=False,
         
-        in_size_hist=2,
+        in_size_hist=4,
         out_size_hist=128,
         
         in_size_vel=1,

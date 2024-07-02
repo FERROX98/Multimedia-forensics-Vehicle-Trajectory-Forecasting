@@ -48,11 +48,11 @@ def train(
     g_loss_fn_2 = rmse
     d_loss_fn = nn.BCELoss()
 
-    opt_generator = torch.optim.Adam(generator.parameters(), lr=0.001)
+    opt_generator = torch.optim.Adam(generator.parameters(), lr=0.005)
     opt_discriminator = torch.optim.Adam(discriminator.parameters(), lr=0.005)
     
-    scheduler_d = StepLR(opt_generator, step_size=3, gamma=0.1)
-    scheduler_g = StepLR(opt_discriminator, step_size=30, gamma=0.1)
+    scheduler_d = StepLR(opt_generator, step_size=1, gamma=0.1)
+    scheduler_g = StepLR(opt_discriminator, step_size=1, gamma=0.1)
 
     for epoch_num in range(train_epochs):
 
@@ -220,8 +220,8 @@ def validate(
 
                 pred_traj_fake = generator(history, nbrs, vel, acc_vehi)
 
-                traj_real = torch.cat([history, fut], dim=0)
-                traj_fake = torch.cat([history, pred_traj_fake[:, :, :2]], dim=0)
+                traj_real = torch.cat([history[:,:,:2], fut], dim=0)
+                traj_fake = torch.cat([history[:,:,:2], pred_traj_fake[:, :, :2]], dim=0)
 
                 y_pred_fake = discriminator(traj_fake)
                 y_pred_real = discriminator(traj_real)
@@ -257,7 +257,7 @@ def validate(
                 val_t4 += t4.item()
                 val_t5 += t5.item()
                 
-                traj_fake = torch.cat([history, traj_fake[:, :, :2]], dim=0)
+                traj_fake = torch.cat([history[:,:,:2], traj_fake[:, :, :2]], dim=0)
 
                 scores_fake = discriminator(traj_fake)
 
@@ -325,8 +325,8 @@ def discriminator_step(
 
     pred_traj_fake = generator(history, nbrs, vel, acc)
 
-    traj_real = torch.cat([history, fut], dim=0)
-    traj_fake = torch.cat([history, pred_traj_fake[:, :, :]], dim=0)
+    traj_real = torch.cat([history[:,:,:2], fut], dim=0)
+    traj_fake = torch.cat([history[:,:,:2], pred_traj_fake[:, :, :]], dim=0)
 
     y_pred_fake = discriminator(traj_fake)
     y_pred_real = discriminator(traj_real)
@@ -338,7 +338,7 @@ def discriminator_step(
 
     optimizer_d.zero_grad()
     loss.backward()
-    nn.utils.clip_grad_norm_(discriminator.parameters(), 10)
+    nn.utils.clip_grad_norm_(discriminator.parameters(), 2)
     optimizer_d.step()
 
     return loss
@@ -369,7 +369,7 @@ def generator_step(
     
     loss+=tot
     
-    traj_fake = torch.cat([history, traj_fake[:, :, :]], dim=0)
+    traj_fake = torch.cat([history[:,:,:2], traj_fake[:, :, :]], dim=0)
 
     scores_fake = discriminator(traj_fake)
 
@@ -377,7 +377,7 @@ def generator_step(
 
     optimizer_g.zero_grad()
     loss.backward()
-    nn.utils.clip_grad_norm_(generator.parameters(), 10)
+    nn.utils.clip_grad_norm_(generator.parameters(), 2)
     optimizer_g.step()
     
     return loss,t1,t2,t3,t4,t5
@@ -385,10 +385,10 @@ def generator_step(
 
 if __name__ == "__main__":
 
-    clean_train_values("SperimentalValue/Train")
+    clean_train_values("SperimentalValue/Test")
     writer = SummaryWriter("SperimentalValue/Test")
    
-    batch_size = 128
+    batch_size = 8
     
     # Model Arguments
     args = load_args()
@@ -396,7 +396,7 @@ if __name__ == "__main__":
     # Initialize network
     gen, dis = init_model(args)
     
-    mem_usg_g = get_model_memory_usage_gen(gen, (15, batch_size, 2), (15, batch_size, 9, 2), ( batch_size, 1), ( batch_size, 1))
+    mem_usg_g = get_model_memory_usage_gen(gen, (15, batch_size, 4), (15, batch_size, 9, 2), ( batch_size, 1), ( batch_size, 1))
     print("Memory usage of generator: ", mem_usg_g)
  
     # Load dataset
