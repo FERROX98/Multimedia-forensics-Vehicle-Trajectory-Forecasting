@@ -280,26 +280,17 @@ class highwayNetGenerator(nn.Module):
             output, state_tuple = self.dec_lstm(encoder_h, state_tuple)
 
             # output
-            fut_pred = self.output_layer(state_tuple[0])
-            # fut_pred = torch.squeeze(fut_pred)
-            # #fut_pred = self.normalization(fut_pred)
-
-            # # last layer
-            # fut_pred = self.out(fut_pred)
+            fut_pred = self.output_layer(output)
 
             # recursive embedding
             encoder_h = self.rec_embending_dec(state_tuple[0])
             encoder_h = encoder_h.view(1, batch, -1)
-
-            #  state_tuple = (fut_pred, state_tuple[1])
-            # fut_pred = self.gaussian_bivariate_distribution(fut_pred)
 
             pred_traj_fake_rel.append(fut_pred)
 
         if len(pred_traj_fake_rel[0]) == 2:
             for el in pred_traj_fake_rel:
                 el = el.unsqueeze(dim=0)
-            # pred_traj_fake_rel = pred_traj_fake_rel.unsqueeze(dim=0)
 
         pred_traj_fake_rel = torch.stack(pred_traj_fake_rel, dim=-1)
         pred_traj_fake_rel = pred_traj_fake_rel.squeeze(dim=0).permute(2, 0, 1)
