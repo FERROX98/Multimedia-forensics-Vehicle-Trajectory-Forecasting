@@ -74,7 +74,7 @@ def test():
 
                 pred_traj_fake = gen(history, nbrs, vel, acc_vehi)
 
-                traj_real = torch.cat([history[:, :, :2], fut[::5,:,:]], dim=0)
+                traj_real = torch.cat([history[:, :, :2], fut[::,:,:]], dim=0)
                 traj_fake = torch.cat([history[:, :, :2], pred_traj_fake[:, :, :2]], dim=0)
 
                 y_pred_fake = dis(traj_fake)
@@ -101,7 +101,7 @@ def test():
             elif g_steps_left > 0:
                 traj_fake = gen(history, nbrs, vel, acc_vehi)
 
-                t1, t2, t3, t4, t5, tot = g_loss_fn2(traj_fake[:, :, :2], fut[::5,:,:])
+                t1, t2, t3, t4, t5, tot = g_loss_fn2(traj_fake[:, :, :2], fut[::,:,:])
 
                 loss_g += tot.item()
 

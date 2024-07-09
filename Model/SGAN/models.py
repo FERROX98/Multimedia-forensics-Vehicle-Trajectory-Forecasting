@@ -278,7 +278,7 @@ class highwayNetGenerator(nn.Module):
         pred_traj_fake_rel = []
         state_tuple = self.init_hidden(batch)
 
-        for _ in range(5):
+        for _ in range(25):
             state_tuple = self.init_hidden(batch)
             output, state_tuple = self.dec_lstm(encoder_h, state_tuple)
 

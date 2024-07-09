@@ -220,8 +220,8 @@ def validate(
 
                 pred_traj_fake = generator(history, nbrs, vel, acc_vehi)
 
-                traj_real = torch.cat([history[::5,:,:2], fut[::5,:,:]], dim=0)
-                traj_fake = torch.cat([history[::5,:,:2], pred_traj_fake[:, :, :2]], dim=0)
+                traj_real = torch.cat([history[::,:,:2], fut[::,:,:]], dim=0)
+                traj_fake = torch.cat([history[::,:,:2], pred_traj_fake[:, :, :2]], dim=0)
 
                 y_pred_fake = discriminator(traj_fake)
                 y_pred_real = discriminator(traj_real)
@@ -247,7 +247,7 @@ def validate(
             elif g_steps_left > 0:
                 traj_fake = generator(history, nbrs, vel, acc_vehi)
                 
-                t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut[::5,:,:])
+                t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut[::,:,:])
 
                 loss_g+= tot.item()
                 
@@ -257,7 +257,7 @@ def validate(
                 val_t4 += t4.item()
                 val_t5 += t5.item()
                 
-                traj_fake = torch.cat([history[::5,:,:2], traj_fake[:, :, :2]], dim=0)
+                traj_fake = torch.cat([history[::,:,:2], traj_fake[:, :, :2]], dim=0)
 
                 scores_fake = discriminator(traj_fake)
 
@@ -325,8 +325,8 @@ def discriminator_step(
 
     pred_traj_fake = generator(history, nbrs, vel, acc)
 
-    traj_real = torch.cat([history[::5,:,:2], fut[::5,:,:]], dim=0)
-    traj_fake = torch.cat([history[::5,:,:2], pred_traj_fake[:, :, :]], dim=0)
+    traj_real = torch.cat([history[::,:,:2], fut[::,:,:]], dim=0)
+    traj_fake = torch.cat([history[::,:,:2], pred_traj_fake[:, :, :]], dim=0)
 
     y_pred_fake = discriminator(traj_fake)
     y_pred_real = discriminator(traj_real)
@@ -365,11 +365,11 @@ def generator_step(
 
     traj_fake = generator(history, nbrs, vel, acc)
 
-    t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut[::5,:,:])
+    t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut[::,:,:])
     
     loss+=tot
     
-    traj_fake = torch.cat([history[::5,:,:2], traj_fake[:, :, :]], dim=0)
+    traj_fake = torch.cat([history[::,:,:2], traj_fake[:, :, :]], dim=0)
 
     scores_fake = discriminator(traj_fake)
 
