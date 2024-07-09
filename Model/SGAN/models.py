@@ -78,17 +78,17 @@ class highwayNetGenerator(nn.Module):
         debug=False,
         
         in_size_hist=4,
-        out_size_hist=128,
+        out_size_hist=64,
         
         in_size_vel=1,
         in_size_acc=1,
         out_emb_vel_acc=32,
         
         in_grid_nbrs_size=2,
-        out_grid_nbrs_size=8,
+        out_grid_nbrs_size=4,
         
         out_size_encoder_hist=64,
-        out_size_emb_target=1024,
+        out_size_emb_target=128,
         
         out_middle_emb_nbrs_enc=4,
         out_nbrs_encoder_size=128,
@@ -113,7 +113,7 @@ class highwayNetGenerator(nn.Module):
         self.out_size_hist = out_size_hist
 
         # combine acc + vel + history encoder
-        self.layers_target_encoder = 4
+        self.layers_target_encoder = 2
         self.in_size_encoder_hist = out_size_hist
         self.out_size_encoder_hist = out_size_encoder_hist
 
@@ -126,7 +126,7 @@ class highwayNetGenerator(nn.Module):
         self.out_grid_nbrs_size = out_grid_nbrs_size
 
         # encode nbrs
-        self.layers_nbrs_encoder = 4
+        self.layers_nbrs_encoder = 2
         self.in_nbrs_encoder_size = out_grid_nbrs_size
         self.out_nbrs_encoder_size = out_nbrs_encoder_size
 
@@ -148,7 +148,8 @@ class highwayNetGenerator(nn.Module):
 
         # pre enc history
         self.input_target_layer = nn.Sequential(
-            nn.Linear(self.in_size_hist, self.out_size_hist), torch.nn.LeakyReLU(0.1)
+            nn.Linear(self.in_size_hist, self.out_size_hist), 
+       #     torch.nn.LeakyReLU(0.1)
         )
 
         # enc history
@@ -163,7 +164,7 @@ class highwayNetGenerator(nn.Module):
         # middle mlp target enc
         self.middle_mlp_target_enc = nn.Sequential(
             torch.nn.Linear(self.in_size_emb_target, self.out_size_emb_target),
-            torch.nn.LeakyReLU(0.1),
+           # torch.nn.LeakyReLU(0.1),
         )
 
         # embedding vel acc
@@ -190,13 +191,13 @@ class highwayNetGenerator(nn.Module):
         # middle mlp nbrs enc
         self.middle_mlp_nbrs_enc = nn.Sequential(
             torch.nn.Linear(self.in_middle_emb_nbrs_enc, self.out_middle_emb_nbrs_enc),
-            torch.nn.LeakyReLU(0.1),
+          #  torch.nn.LeakyReLU(0.1),
         )
         # pre dec
         self.pre_dec = nn.Sequential(
             nn.Linear(self.in_size_pre_dec, self.out_size_pre_dec),
             nn.LeakyReLU(0.1),
-            nn.Dropout(p=0.2),
+            #nn.Dropout(p=0.2),
         )
 
         # dec
@@ -207,11 +208,13 @@ class highwayNetGenerator(nn.Module):
 
         # Output layers:
         self.output_layer = nn.Sequential(
-            nn.Linear(self.out_size_dec, self.in_last_mlp),
-            #  nn.ReLU(),
-            #   torch.nn.LeakyReLU(0.1)
+            nn.Linear(self.out_size_dec, self.out_size_dec),
+          # nn.Linear(self.out_size_dec, self.in_last_mlp),
+            #nn.ReLU(),
+          #  nn.Linear(self.out_size_dec, self.out_size_dec),
+            #torch.nn.LeakyReLU(0.1),
             nn.Dropout(p=0.2),
-            nn.Linear(self.in_last_mlp, self.out_last_mlp),
+            nn.Linear(self.out_size_dec, self.out_last_mlp),
         )
 
     # [ seq/time -> (15 (3s * 5Fps) + current time t = 16 ), b_size, feat_size (2->x,y)]
@@ -275,13 +278,14 @@ class highwayNetGenerator(nn.Module):
         pred_traj_fake_rel = []
         state_tuple = self.init_hidden(batch)
 
-        for _ in range(25):
-
+        for _ in range(5):
+            state_tuple = self.init_hidden(batch)
             output, state_tuple = self.dec_lstm(encoder_h, state_tuple)
 
             # output
             fut_pred = self.output_layer(output)
-
+           # fut_pred = self.gaussian_bivariate_distribution(fut_pred)
+            
             # recursive embedding
             encoder_h = self.rec_embending_dec(state_tuple[0])
             encoder_h = encoder_h.view(1, batch, -1)
@@ -292,8 +296,8 @@ class highwayNetGenerator(nn.Module):
             for el in pred_traj_fake_rel:
                 el = el.unsqueeze(dim=0)
 
-        pred_traj_fake_rel = torch.stack(pred_traj_fake_rel, dim=-1)
-        pred_traj_fake_rel = pred_traj_fake_rel.squeeze(dim=0).permute(2, 0, 1)
+        pred_traj_fake_rel = torch.stack(pred_traj_fake_rel, dim=0)
+        pred_traj_fake_rel = pred_traj_fake_rel.squeeze(dim=0).view(-1, batch, 2)
 
         return pred_traj_fake_rel
 
@@ -322,17 +326,22 @@ class highwayNetGenerator(nn.Module):
             .cuda()
             .requires_grad_(),
         )
+        
 
+    #(Graves, 2015)
     def gaussian_bivariate_distribution(self, out):
 
         mux = out[:, :, 0]
         muy = out[:, :, 1]
         varx = out[:, :, 2]
         vary = out[:, :, 3]
+        varx = torch.exp(varx)
+        vary = torch.exp(vary)
         rho = torch.tanh(
             out[:, :, 4]
         )  # because covariance must be between -1 and 1 in ordert to not have negative determinant (det(cov) = varx*vary - (rho)^2) then
-        return torch.cat((mux, muy, varx, vary, rho), dim=0)
+        return torch.cat((mux, muy, varx, vary, rho), dim=2)
+
 
 
 if __name__ == "__main__":

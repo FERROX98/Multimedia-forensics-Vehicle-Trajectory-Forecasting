@@ -15,65 +15,51 @@ from torch import nn
 
 mse = nn.MSELoss()
 
+
 def rmse_long(predicted_values, true_values):
 
-    t1 = mse(predicted_values[:5, :, 0], true_values[:5, :, 0])
-    t2 = mse(predicted_values[5:10, :, 0], true_values[5:10, :, 0])
-    t3 = mse(predicted_values[10:15, :, 0], true_values[10:15, :, 0])
-    t4 = mse(predicted_values[15:20, :, 0], true_values[15:20, :, 0])
-    t5 = mse(predicted_values[20:25, :, 0], true_values[20:25, :, 0])
+    t1 = torch.pow((true_values[:1, :, 0] - predicted_values[:1, :, 0]), 2)
+    t2 = torch.pow((true_values[1:2, :, 0] - predicted_values[1:2, :, 0]), 2)
+    t3 = torch.pow((true_values[2:3, :, 0] - predicted_values[2:3, :, 0]), 2)
+    t4 = torch.pow((true_values[3:4, :, 0] - predicted_values[3:4, :, 0]), 2)
+    t5 = torch.pow((true_values[4:5, :, 0] - predicted_values[4:5, :, 0]), 2)
 
     return t1, t2, t3, t4, t5
+
 
 def rmse_lat(predicted_values, true_values):
-  
-    t1 = mse(predicted_values[:5, :, 1], true_values[:5, :, 1])
-    t2 = mse(predicted_values[5:10, :, 1], true_values[5:10, :, 1]) 
-    t3 = mse(predicted_values[10:15, :, 1], true_values[10:15, :, 1])
-    t4 = mse(predicted_values[15:20, :, 1], true_values[15:20, :, 1])
-    t5 = mse(predicted_values[20:25, :, 1], true_values[20:25, :, 1])
-    
+
+    t1 = torch.pow((true_values[:1, :, 1] - predicted_values[:1, :, 1]), 2)
+    t2 = torch.pow((true_values[1:2, :, 1] - predicted_values[1:2, :, 1]), 2)
+    t3 = torch.pow((true_values[2:3, :, 1] - predicted_values[2:3, :, 1]), 2)
+    t4 = torch.pow((true_values[3:4, :, 1] - predicted_values[3:4, :, 1]), 2)
+    t5 = torch.pow((true_values[4:5, :, 1] - predicted_values[4:5, :, 1]), 2)
+
     return t1, t2, t3, t4, t5
 
+
 def rmse(predicted_values, true_values):
-    # Convert coordinates from feet to meters   
+    # Convert coordinates from feet to meters
     predicted_values = predicted_values * 0.3048
     true_values = true_values * 0.3048
     lat_t1, lat_t2, lat_t3, lat_t4, lat_t5 = rmse_lat(predicted_values, true_values)
-    lon_t1, lon_t2, lon_t3, lon_t4, lon_t5  = rmse_long(predicted_values, true_values)
-    tot_t1_loss = torch.sqrt(torch.mean((lat_t1+lon_t1)**2))
-    tot_t2_loss = torch.sqrt(torch.mean((lat_t2+lon_t2)**2))
-    tot_t3_loss = torch.sqrt(torch.mean((lat_t3+lon_t3)**2))
-    tot_t4_loss = torch.sqrt(torch.mean((lat_t4+lon_t4)**2))
-    tot_t5_loss = torch.sqrt(torch.mean((lat_t5+lon_t5)**2))
- 
-    tot = torch.sqrt(tot_t1_loss+tot_t2_loss+tot_t3_loss+tot_t4_loss+tot_t5_loss)
-   
-    tot_t1 = tot_t1_loss # torch.sqrt(tot_t1_loss)
-    tot_t2 = tot_t2_loss # torch.sqrt(tot_t2_loss)
-    tot_t3 = tot_t3_loss# torch.sqrt(tot_t3_loss)
-    tot_t4 = tot_t4_loss#torch.sqrt(tot_t4_loss)
-    tot_t5 = tot_t5_loss#torch.sqrt(tot_t5_loss)
+    lon_t1, lon_t2, lon_t3, lon_t4, lon_t5 = rmse_long(predicted_values, true_values)
+
+    tot_t1_loss = torch.sqrt(lat_t1 + lon_t1)
+    tot_t2_loss = torch.sqrt(lat_t2 + lon_t2)
+    tot_t3_loss = torch.sqrt(lat_t3 + lon_t3)
+    tot_t4_loss = torch.sqrt(lat_t4 + lon_t4)
+    tot_t5_loss = torch.sqrt(lat_t5 + lon_t5)
+
+    tot = torch.sum((predicted_values - true_values)**2)
+
+    tot_t1 = torch.sqrt(torch.mean(tot_t1_loss))
+    tot_t2 = torch.sqrt(torch.mean(tot_t2_loss))
+    tot_t3 = torch.sqrt(torch.mean(tot_t3_loss))
+    tot_t4 = torch.sqrt(torch.mean(tot_t4_loss))
+    tot_t5 = torch.sqrt(torch.mean(tot_t5_loss))
 
     return tot_t1, tot_t2, tot_t3, tot_t4, tot_t5, tot
-
-
-def rmse_old(predicted_values, true_values):
-  
-    t1 = torch.sqrt(torch.mean((predicted_values[:5,:,:] - true_values[:5,:,:] )**2))
-    t2 = torch.sqrt(torch.mean((predicted_values[5:10,:,:] - true_values[5:10,:,:])**2))
-    t3 = torch.sqrt(torch.mean((predicted_values[10:15:,:] - true_values[10:15:,:])**2))
-    t4 = torch.sqrt(torch.mean((predicted_values[15:20,:,:] - true_values[15:20,:,:])**2))
-    t5 = torch.sqrt(torch.mean((predicted_values[20:25,:,:] - true_values[20:25,:,:])**2))
-    
-    #Total RMSE
-    difference = predicted_values - true_values
-    squared_difference = difference**2
-    mean_squared_difference = torch.mean(squared_difference)
-    rmse = torch.sqrt(mean_squared_difference)
-
-      
-    return t1,t2,t3,t4,t5,rmse
 
 
 def load_args():
@@ -87,16 +73,15 @@ def load_args():
 
 def load_dataset(t_h, t_f, batch_size=128):
     
-    #  trSet = ngsimDataset('Data/TrainSet.mat', t_h=t_h )
-    # valSet = ngsimDataset(
-    #     "Data/sample.csv","Data/sample_tracks.csv"
-    # )
+ 
     samples = None
     with open("Data/val_processed.pkl", "rb") as f:
         samples = pickle.load(f)
     
+    
+    
     # fileter sample from nan value
-    samples = [sample for sample in samples if not torch.isnan(sample[0]).any() and not torch.isnan(sample[1]).any() and not torch.isnan(sample[2]).any()]
+    samples = [sample for sample in samples if not torch.isnan(sample[0]).any() and not torch.isnan(sample[1]).any() and not torch.isnan(sample[2]).any() ]
     #70% of the data is used for training
     train_samples = samples[:int(0.7 * len(samples))]
     #10% of the data is used for validation
@@ -114,7 +99,7 @@ def load_dataset(t_h, t_f, batch_size=128):
     trSet = ngsimDataset(
         "Data/ValSet_samples.csv",
         "Data/ValSet_tracks.csv",
-        samples=val_samples
+        samples=train_samples
     )
     
     tsSet = ngsimDataset(
@@ -210,3 +195,6 @@ def get_model_memory_usage_per_sample(model):
     return sum(
         [param.nelement() * param.element_size() for param in model.parameters()]
     ) / (1024**2)
+
+
+

@@ -48,11 +48,11 @@ def train(
     g_loss_fn_2 = rmse
     d_loss_fn = nn.BCELoss()
 
-    opt_generator = torch.optim.Adam(generator.parameters(), lr=0.005)
+    opt_generator = torch.optim.Adam(generator.parameters(), lr=0.001)
     opt_discriminator = torch.optim.Adam(discriminator.parameters(), lr=0.005)
     
-    scheduler_d = StepLR(opt_generator, step_size=1, gamma=0.1)
-    scheduler_g = StepLR(opt_discriminator, step_size=1, gamma=0.1)
+    scheduler_d = StepLR(opt_generator, step_size=30, gamma=0.1)
+    scheduler_g = StepLR(opt_discriminator, step_size=35, gamma=0.1)
 
     for epoch_num in range(train_epochs):
 
@@ -220,8 +220,8 @@ def validate(
 
                 pred_traj_fake = generator(history, nbrs, vel, acc_vehi)
 
-                traj_real = torch.cat([history[:,:,:2], fut], dim=0)
-                traj_fake = torch.cat([history[:,:,:2], pred_traj_fake[:, :, :2]], dim=0)
+                traj_real = torch.cat([history[::5,:,:2], fut[::5,:,:]], dim=0)
+                traj_fake = torch.cat([history[::5,:,:2], pred_traj_fake[:, :, :2]], dim=0)
 
                 y_pred_fake = discriminator(traj_fake)
                 y_pred_real = discriminator(traj_real)
@@ -247,7 +247,7 @@ def validate(
             elif g_steps_left > 0:
                 traj_fake = generator(history, nbrs, vel, acc_vehi)
                 
-                t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut)
+                t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut[::5,:,:])
 
                 loss_g+= tot.item()
                 
@@ -257,7 +257,7 @@ def validate(
                 val_t4 += t4.item()
                 val_t5 += t5.item()
                 
-                traj_fake = torch.cat([history[:,:,:2], traj_fake[:, :, :2]], dim=0)
+                traj_fake = torch.cat([history[::5,:,:2], traj_fake[:, :, :2]], dim=0)
 
                 scores_fake = discriminator(traj_fake)
 
@@ -325,8 +325,8 @@ def discriminator_step(
 
     pred_traj_fake = generator(history, nbrs, vel, acc)
 
-    traj_real = torch.cat([history[:,:,:2], fut], dim=0)
-    traj_fake = torch.cat([history[:,:,:2], pred_traj_fake[:, :, :]], dim=0)
+    traj_real = torch.cat([history[::5,:,:2], fut[::5,:,:]], dim=0)
+    traj_fake = torch.cat([history[::5,:,:2], pred_traj_fake[:, :, :]], dim=0)
 
     y_pred_fake = discriminator(traj_fake)
     y_pred_real = discriminator(traj_real)
@@ -338,7 +338,7 @@ def discriminator_step(
 
     optimizer_d.zero_grad()
     loss.backward()
-    nn.utils.clip_grad_norm_(discriminator.parameters(), 2)
+    nn.utils.clip_grad_norm_(discriminator.parameters(), 1.0)
     optimizer_d.step()
 
     return loss
@@ -365,19 +365,19 @@ def generator_step(
 
     traj_fake = generator(history, nbrs, vel, acc)
 
-    t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut)
+    t1,t2,t3,t4,t5, tot = g_loss_fn2(traj_fake[:, :, :], fut[::5,:,:])
     
     loss+=tot
     
-    traj_fake = torch.cat([history[:,:,:2], traj_fake[:, :, :]], dim=0)
+    traj_fake = torch.cat([history[::5,:,:2], traj_fake[:, :, :]], dim=0)
 
     scores_fake = discriminator(traj_fake)
 
-    loss += g_loss_fn(scores_fake, torch.ones_like(scores_fake))
+    loss += 0.2 * g_loss_fn(scores_fake, torch.ones_like(scores_fake))
 
     optimizer_g.zero_grad()
     loss.backward()
-    nn.utils.clip_grad_norm_(generator.parameters(), 2)
+    nn.utils.clip_grad_norm_(generator.parameters(), 5)
     optimizer_g.step()
     
     return loss,t1,t2,t3,t4,t5
@@ -388,7 +388,7 @@ if __name__ == "__main__":
     clean_train_values("SperimentalValue/Test")
     writer = SummaryWriter("SperimentalValue/Test")
    
-    batch_size = 8
+    batch_size = 64
     
     # Model Arguments
     args = load_args()
@@ -407,7 +407,7 @@ if __name__ == "__main__":
     start_time = datetime.datetime.now()
     
     # Train
-    train(trDataloader, valDataloader, 10, gen, dis)
+    train(trDataloader, valDataloader, 30, gen, dis)
     
     end_time = datetime.datetime.now()
     
