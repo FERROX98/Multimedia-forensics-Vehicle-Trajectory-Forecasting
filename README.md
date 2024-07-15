@@ -94,7 +94,7 @@ The Generator generates future vehicle trajectories based on historical and neig
 1. **Input Processing**: Embeds historical and neighboring vehicle data.
 2. **Encoding**: LSTM encodes embedded data.
 3. **Decoding**: LSTM combines encoded states to predict trajectories.
-4. **Prediction**: LSTM outputs are refined using Gaussian bivariate distribution.
+4. **Prediction**: LSTM outputs are refined using a output layer which output is a list of coordinates for next 5 seconds.
 
 ### Discriminator Architecture
 
