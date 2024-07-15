@@ -40,7 +40,7 @@ Vehicle trajectory forecasting is a critical component in autonomous driving sys
 
 ## Pre Processing
 
-In this project, we are using a CSV file associated with the NGSIM dataset. The NGSIM dataset contains pre-extracted data about agents (vehicles) on the road, which includes various attributes such as vehicle ID, frame ID, position coordinates, velocity, acceleration, and more. The primary objective of this project is not to extract information from raw data but to predict the future trajectories of target vehicles using the provided dataset. The sequences consist of 3 seconds of history and 5 seconds of predicted trajectory data. The video sequence is captured 10FPs, it's downsampled to 5FPs, in order to have 15Frame (15 coordinates) of history and 25FPs for the prediction.
+In this project, we are using a CSV file associated with the NGSIM dataset. The NGSIM dataset contains pre-extracted data about agents (vehicles) on the road, which includes various attributes such as vehicle ID, frame ID, position coordinates, velocity, acceleration, and more. The primary objective of this project is not to extract information from raw data but to predict the future trajectories of target vehicles using the provided dataset. The sequences consist of 3 seconds of history and 5 seconds of predicted trajectory data. The video sequence is captured 10FPs, it's downsampled to 5FPs, in order to have 15 Frame (15 coordinates) of history and 25Frame (25 coordinates) for the prediction.
 
 The preprocessing steps are as follows:
 
@@ -80,6 +80,7 @@ The Generator generates future vehicle trajectories based on historical and neig
 
   - **Target Embedding Layer**: Embeds historical trajectory data.
   - **Neighbor Embedding Layer**: Embeds neighboring vehicle data.
+  -  **Velocity and acceleration Embedding Layer**: Embeds target velocity and acceleration vehicle data.
 - **Leaky ReLU Activation**: Applies a non-linear activation function with a small negative slope.
 - **Encoder LSTMs**:
 
